@@ -176,6 +176,10 @@ public class Parser {
     private Map<Lexer.TokenType, PrefixParser> prefixParsers = new HashMap<>();
 
     private Node parseFirstNode(final Lexer lexer, Lexer.Token token) {
+        prefixParsers.put(Lexer.TokenType.EOF, new EofPrefixParser());
+        if (prefixParsers.get(token.getType()) != null) {
+            return prefixParsers.get(token.getType()).parse(token, this);
+        }
         Node node;
         if (token instanceof Lexer.Eof) {
             node = new EmptyNode();
