@@ -4,6 +4,10 @@ plugins {
 	id 'idea'
 }
 
+compileJava {
+	sourceCompatibility '13'
+}
+
 repositories {
 	mavenCentral()
 }
@@ -13,8 +17,6 @@ dependencies {
 }
 
 test {
-    systemProperties = System.properties
-    
 	useJUnitPlatform {
 	}
 	testLogging {
