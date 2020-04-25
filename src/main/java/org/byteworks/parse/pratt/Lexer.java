@@ -17,6 +17,8 @@ public class Lexer {
         final static Minus MINUS = new Minus();
         final static Mult MULT = new Mult();
         final static Divide DIVIDE = new Divide();
+        final static LParen LPAREN = new LParen();
+        final static RParen RPAREN = new RParen();
 
         @Override
         public String toString() {
@@ -51,6 +53,14 @@ public class Lexer {
         public Divide() { super("/"); }
     }
 
+    public static class LParen extends Token {
+        public LParen() { super("("); }
+    }
+
+    public static class RParen extends Token {
+        public RParen() { super(")"); }
+    }
+
     public Token next() {
         if (!available()) {
             return Token.EOF;
@@ -77,6 +87,10 @@ public class Lexer {
             return Token.MULT;
         } else if (ch == '/') {
             return Token.DIVIDE;
+        } else if (ch == '(') {
+            return Token.LPAREN;
+        } else if (ch == ')') {
+            return Token.RPAREN;
         }
         return new Unknown(String.valueOf(ch));
     }

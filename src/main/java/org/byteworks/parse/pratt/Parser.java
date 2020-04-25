@@ -114,16 +114,18 @@ public class Parser {
         }
     }
 
+    static class PrecedencePairs {
+        static final Pair<Integer,Integer> EOF = new Pair<>(-1, 0);
+        static final Pair<Integer,Integer> PARENS = new Pair<>(-1, 0);
+        static final Pair<Integer, Integer> PLUS_MINUS = new Pair<>(3, 4);
+        static final Pair<Integer,Integer> MULT_DIV = new Pair<>(7, 8);
+        static final Pair<Integer,Integer> NEGATION = new Pair<>(9, 10);
+    }
+
     public List<Node> parse(Lexer lexer) {
         return Collections.singletonList(parse(lexer, 0));
     }
 
-    /*
-      0     == entry
-      1,2   == +, -
-      3,4   == *, /
-      9,10  == negation
-     */
     private Node parse(final Lexer lexer, final int precedence) {
         Node node = null;
         Lexer.Token token = lexer.next();
@@ -132,8 +134,12 @@ public class Parser {
         } else if (token instanceof Lexer.Number) {
             node = new LiteralNode(token.getChars());
         } else if (token instanceof Lexer.Minus) {
-            Node expr = parse(lexer, 10);
+            Node expr = parse(lexer, PrecedencePairs.NEGATION.right);
             node = new NegationNode(expr);
+        } else if (token instanceof Lexer.LParen) {
+            Node expr = parse(lexer, PrecedencePairs.PARENS.right);
+            token = lexer.next();
+            node = expr;
         }
         while (true) {
             token = lexer.peek();
@@ -181,11 +187,13 @@ public class Parser {
 
     private Pair<Integer, Integer> precedence(Lexer.Token token) {
         if (token instanceof Lexer.Plus || token instanceof Lexer.Minus) {
-            return new Pair<>(1, 2);
+            return PrecedencePairs.PLUS_MINUS;
         } else if (token instanceof Lexer.Mult || token instanceof Lexer.Divide) {
-            return new Pair<>(3, 4);
+            return PrecedencePairs.MULT_DIV;
         } else if (token instanceof Lexer.Eof) {
-            return new Pair<>(-1, 0);
+            return PrecedencePairs.EOF;
+        } else if (token instanceof Lexer.RParen) {
+            return PrecedencePairs.PARENS;
         }
         throw new IllegalStateException("Bad token " + token.getChars());
     }
