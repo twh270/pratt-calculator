@@ -3,7 +3,7 @@ package org.byteworks.parse.pratt;
 import java.io.PrintStream;
 import java.util.List;
 
-public class Interpreter {
+public class CalculatorInterpreter {
 
     public enum Type {
         NUMBER
@@ -34,56 +34,56 @@ public class Interpreter {
 
     public void exec(List<Parser.Node> nodes, PrintStream ps) {
         for (Parser.Node node : nodes) {
-            if (node instanceof Parser.ExpressionNode) {
-                ps.println(evaluateExpression((Parser.ExpressionNode) node));
+            if (node instanceof CalculatorParser.ExpressionNode) {
+                ps.println(evaluateExpression((CalculatorParser.ExpressionNode) node));
             }
         }
     }
 
-    private Value evaluateExpression(final Parser.ExpressionNode expression) {
-        if (expression instanceof Parser.LiteralNode) {
-            Parser.LiteralNode literal = (Parser.LiteralNode) expression;
+    private Value evaluateExpression(final CalculatorParser.ExpressionNode expression) {
+        if (expression instanceof CalculatorParser.LiteralNode) {
+            CalculatorParser.LiteralNode literal = (CalculatorParser.LiteralNode) expression;
             try {
                 Long longValue = Long.parseLong(literal.getValue());
                 return new Value(longValue, Type.NUMBER);
             } catch (NumberFormatException e) {
                 throw new IllegalStateException("Unable to parse literal " + literal.getValue() + " in expression " + expression);
             }
-        } else if (expression instanceof Parser.UnaryOpNode) {
-            Parser.UnaryOpNode unaryOp = (Parser.UnaryOpNode) expression;
-            if (!(unaryOp.getExpr() instanceof Parser.ExpressionNode)) {
+        } else if (expression instanceof CalculatorParser.UnaryOpNode) {
+            CalculatorParser.UnaryOpNode unaryOp = (CalculatorParser.UnaryOpNode) expression;
+            if (!(unaryOp.getExpr() instanceof CalculatorParser.ExpressionNode)) {
                 throw new IllegalStateException("Unary operator expected an expression but got " + unaryOp.getExpr() + " in expression " + expression);
             }
-            Value value = evaluateExpression((Parser.ExpressionNode) unaryOp.getExpr());
+            Value value = evaluateExpression((CalculatorParser.ExpressionNode) unaryOp.getExpr());
             if (value.getType() != Type.NUMBER) {
                 throw new IllegalStateException("Unary operator expected a number but got " + value + " in expression " + expression);
             }
-            if (unaryOp instanceof Parser.NegativeSigned) {
+            if (unaryOp instanceof CalculatorParser.NegativeSigned) {
                 return new Value(-((Long) value.getValue()), Type.NUMBER);
-            } else if (unaryOp instanceof Parser.PositiveSigned) {
+            } else if (unaryOp instanceof CalculatorParser.PositiveSigned) {
                 return new Value(value.getValue(), Type.NUMBER);
             } else {
                 throw new IllegalStateException("Unknown unary operator " + unaryOp + " in expression " + expression);
             }
-        } else if (expression instanceof Parser.BinaryOpNode) {
-            Parser.BinaryOpNode binaryOp = (Parser.BinaryOpNode) expression;
-            if (!(binaryOp.getLhs() instanceof Parser.ExpressionNode)) {
+        } else if (expression instanceof CalculatorParser.BinaryOpNode) {
+            CalculatorParser.BinaryOpNode binaryOp = (CalculatorParser.BinaryOpNode) expression;
+            if (!(binaryOp.getLhs() instanceof CalculatorParser.ExpressionNode)) {
                 throw new IllegalStateException("Expected an expression for lhs of " + expression + " but got " + binaryOp.getLhs().getClass().getSimpleName() + " instead");
             }
-            if (!(binaryOp.getRhs() instanceof Parser.ExpressionNode)) {
+            if (!(binaryOp.getRhs() instanceof CalculatorParser.ExpressionNode)) {
                 throw new IllegalStateException("Expected an expression for rhs of " + expression + " but got " + binaryOp.getLhs().getClass().getSimpleName() + " instead");
             }
-            Parser.ExpressionNode lhs = (Parser.ExpressionNode) binaryOp.getLhs();
-            Parser.ExpressionNode rhs = (Parser.ExpressionNode) binaryOp.getRhs();
+            CalculatorParser.ExpressionNode lhs = (CalculatorParser.ExpressionNode) binaryOp.getLhs();
+            CalculatorParser.ExpressionNode rhs = (CalculatorParser.ExpressionNode) binaryOp.getRhs();
             Value left = evaluateExpression(lhs);
             Value right = evaluateExpression(rhs);
-            if (binaryOp instanceof Parser.PlusNode) {
+            if (binaryOp instanceof CalculatorParser.PlusNode) {
                 return binaryPlus(left, right);
-            } else if (binaryOp instanceof Parser.MinusNode) {
+            } else if (binaryOp instanceof CalculatorParser.MinusNode) {
                 return binaryMinus(left, right);
-            } else if (binaryOp instanceof Parser.MultNode) {
+            } else if (binaryOp instanceof CalculatorParser.MultNode) {
                 return binaryMult(left, right);
-            } else if (binaryOp instanceof Parser.DivideNode) {
+            } else if (binaryOp instanceof CalculatorParser.DivideNode) {
                 return binaryDiv(left, right);
             } else {
                 throw new IllegalStateException("Don't know how to evaluate binary operator " + expression.getClass().getSimpleName() + " in expression " + expression);

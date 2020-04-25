@@ -7,20 +7,20 @@ import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class InterpreterTest {
+public class CalculatorInterpreterTest {
 
     private List<Parser.Node> nodes;
     private PrintStream ps;
-    private Interpreter testObj;
+    private CalculatorInterpreter testObj;
     private ByteArrayOutputStream baos;
 
     private void setUp(String input) {
         Lexer lexer = new Lexer(input);
-        Parser parser = new Parser();
+        Parser parser = CalculatorParser.createParser();
         nodes = parser.parse(lexer);
         baos = new ByteArrayOutputStream();
         ps = new PrintStream(baos);
-        testObj = new Interpreter();
+        testObj = new CalculatorInterpreter();
     }
 
     @Test
@@ -28,7 +28,7 @@ public class InterpreterTest {
         setUp("1 + 2");
         testObj.exec(nodes, ps);
         ps.flush();
-        Assertions.assertEquals("3: NUMBER\n", new String(baos.toByteArray()));
+        Assertions.assertEquals("5: NUMBER\n", new String(baos.toByteArray()));
     }
 
     @Test

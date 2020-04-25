@@ -5,12 +5,12 @@ import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-class ParserTest {
+class CalculatorParserTest {
 
     @Test
     void parseAddition() {
         Lexer lexer = new Lexer("1 + 2");
-        Parser parser = new Parser();
+        Parser parser = CalculatorParser.createParser();
         List<Parser.Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.stream().forEach(sb::append);
@@ -20,7 +20,7 @@ class ParserTest {
     @Test
     void parseMultiplication() {
         Lexer lexer = new Lexer("1 * 2");
-        Parser parser = new Parser();
+        Parser parser = CalculatorParser.createParser();
         List<Parser.Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.stream().forEach(sb::append);
@@ -30,7 +30,7 @@ class ParserTest {
     @Test
     void parseSimpleExpression() {
         Lexer lexer = new Lexer("1 + 2 * 3");
-        Parser parser = new Parser();
+        Parser parser = CalculatorParser.createParser();
         List<Parser.Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.stream().forEach(sb::append);
@@ -40,7 +40,7 @@ class ParserTest {
     @Test
     void parseComplexExpression() {
         Lexer lexer = new Lexer("4 * 1 + 2 * 3");
-        Parser parser = new Parser();
+        Parser parser = CalculatorParser.createParser();
         List<Parser.Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.stream().forEach(sb::append);
@@ -50,7 +50,7 @@ class ParserTest {
     @Test
     void parseNegativeNumber() {
         Lexer lexer = new Lexer("-3 + 4");
-        Parser parser = new Parser();
+        Parser parser = CalculatorParser.createParser();
         List<Parser.Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.stream().forEach(sb::append);
@@ -60,7 +60,7 @@ class ParserTest {
     @Test
     void parsePositiveNumber() {
         Lexer lexer = new Lexer("3 + +4");
-        Parser parser = new Parser();
+        Parser parser = CalculatorParser.createParser();
         List<Parser.Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.stream().forEach(sb::append);
@@ -70,7 +70,7 @@ class ParserTest {
     @Test
     void parsesSimpleParenthesized() {
         Lexer lexer = new Lexer("(3 + 4)");
-        Parser parser = new Parser();
+        Parser parser = CalculatorParser.createParser();
         List<Parser.Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.stream().forEach(sb::append);
@@ -80,7 +80,7 @@ class ParserTest {
     @Test
     void parseParenthesized() {
         Lexer lexer = new Lexer("(3 + 4) * 6");
-        Parser parser = new Parser();
+        Parser parser = CalculatorParser.createParser();
         List<Parser.Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.stream().forEach(sb::append);

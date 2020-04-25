@@ -5,8 +5,8 @@ import java.util.Scanner;
 
 public class REPL {
     public static void main(String[] args) {
-        Parser parser = new Parser();
-        Interpreter interpreter = new Interpreter();
+        Parser parser = CalculatorParser.createParser();
+        CalculatorInterpreter interpreter = new CalculatorInterpreter();
 
         Scanner scanner = new Scanner(System.in);
         while(true) {
