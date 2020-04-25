@@ -20,17 +20,20 @@ public class CalculatorParser {
         prefixParsers.put(Lexer.TokenType.PLUS, new PlusPrefixParser());
         prefixParsers.put(Lexer.TokenType.LPAREN, new LParenPrefixParser());
         prefixParsers.put(Lexer.TokenType.IDENTIFIER, new IdentifierPrefixParser());
+        prefixParsers.put(Lexer.TokenType.EOL, new EndOfLinePrefixParser());
         tokenPrecedence.put(Lexer.TokenType.PLUS, PrecedencePairs.PLUS_MINUS);
         tokenPrecedence.put(Lexer.TokenType.MINUS, PrecedencePairs.PLUS_MINUS);
         tokenPrecedence.put(Lexer.TokenType.MULTIPLY, PrecedencePairs.MULT_DIV);
         tokenPrecedence.put(Lexer.TokenType.DIVIDE, PrecedencePairs.MULT_DIV);
         tokenPrecedence.put(Lexer.TokenType.EOF, PrecedencePairs.EOF);
+        tokenPrecedence.put(Lexer.TokenType.EOL, PrecedencePairs.EOL);
         tokenPrecedence.put(Lexer.TokenType.RPAREN, PrecedencePairs.PARENS);
         tokenPrecedence.put(Lexer.TokenType.ASSIGNMENT, PrecedencePairs.ASSIGNMENT);
     }
 
     static class PrecedencePairs {
         static final Parser.Pair<Integer,Integer> EOF = new Parser.Pair<>(-1, 0);
+        static final Parser.Pair<Integer,Integer> EOL = new Parser.Pair<>(-1, 0);
         static final Parser.Pair<Integer,Integer> PARENS = new Parser.Pair<>(-1, 0);
         static final Parser.Pair<Integer,Integer> PLUS_MINUS = new Parser.Pair<>(3, 4);
         static final Parser.Pair<Integer,Integer> MULT_DIV = new Parser.Pair<>(7, 8);
@@ -169,6 +172,14 @@ public class CalculatorParser {
         @Override
         public Parser.Node parse(final Lexer.Token token, final Parser parser, Lexer lexer) {
             return new EmptyNode();
+        }
+    }
+
+    static class EndOfLinePrefixParser implements Parser.PrefixParser {
+
+        @Override
+        public Parser.Node parse(final Lexer.Token token, final Parser parser, final Lexer lexer) {
+            return parser.parse(lexer, PrecedencePairs.EOL.getRight());
         }
     }
 

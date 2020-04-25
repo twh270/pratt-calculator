@@ -1,6 +1,6 @@
 package org.byteworks.parse.pratt;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -39,7 +39,14 @@ public class Parser {
 
 
     public List<Node> parse(Lexer lexer) {
-        return Collections.singletonList(parse(lexer, 0));
+        List<Node> nodes = new ArrayList<>();
+        while(lexer.peek() != Lexer.Token.EOF) {
+            nodes.add(parse(lexer, 0));
+            if (nodes.size() > 3) {
+                throw new IllegalStateException("We don't want many lines yet -- blow up to avoid having to kill the VM");
+            }
+        }
+        return nodes;
     }
 
     public Node parse(final Lexer lexer, final int precedence) {
@@ -55,6 +62,9 @@ public class Parser {
     private boolean shouldParseInfix(Lexer lexer, int precedence) {
         Lexer.Token token = lexer.peek();
         final Pair<Integer, Integer> precedencePair = precedence(token);
+        if (precedencePair == null) {
+            throw new IllegalStateException("Got no precedence pair for parse infix, token = " + token);
+        }
         return precedencePair.left >= precedence;
     }
 

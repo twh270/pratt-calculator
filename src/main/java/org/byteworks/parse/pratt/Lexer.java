@@ -10,7 +10,7 @@ public class Lexer {
     public Lexer(String input) { this.input = input; }
 
     public enum TokenType {
-        UNKNOWN, PLUS, MINUS, MULTIPLY, DIVIDE, LPAREN, RPAREN, EOF, NUMBER, IDENTIFIER,
+        UNKNOWN, PLUS, MINUS, MULTIPLY, DIVIDE, LPAREN, RPAREN, EOF, EOL, NUMBER, IDENTIFIER,
         ASSIGNMENT;
 
         private static Map<String, TokenType> charsToToken = new HashMap<>();
@@ -41,6 +41,7 @@ public class Lexer {
         public TokenType getType() { return type; }
 
         final static Eof EOF = new Eof();
+        final static Eol EOL = new Eol();
         final static Plus PLUS = new Plus();
         final static Minus MINUS = new Minus();
         final static Mult MULT = new Mult();
@@ -67,6 +68,10 @@ public class Lexer {
         Eof() {
             super("", TokenType.EOF);
         }
+    }
+
+    public static class Eol extends Token {
+        Eol() { super("", TokenType.EOL); }
     }
 
     public static class Unknown extends Token {
@@ -111,6 +116,9 @@ public class Lexer {
         }
         char ch = read_ch();
         while (Character.isWhitespace(ch) && available()) {
+            if (ch == '\n') {
+                return Token.EOL;
+            }
             ch = read_ch();
         }
         if (Character.isWhitespace(ch) && !available()) {

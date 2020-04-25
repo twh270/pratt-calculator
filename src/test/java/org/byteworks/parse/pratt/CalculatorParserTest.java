@@ -106,4 +106,14 @@ class CalculatorParserTest {
         ast.stream().forEach(sb::append);
         Assertions.assertEquals("(= x (* 3 (+ 4 9)))", sb.toString());
     }
+
+    @Test
+    void endOfLineTest() {
+        Lexer lexer = new Lexer("x = 3\nx * 2");
+        Parser parser = CalculatorParser.createParser();
+        List<Parser.Node> ast = parser.parse(lexer);
+        StringBuilder sb = new StringBuilder();
+        ast.stream().forEach(sb::append);
+        Assertions.assertEquals("(= x 3)(* x 2)", sb.toString());
+    }
 }
