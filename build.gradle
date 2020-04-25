@@ -4,8 +4,8 @@ plugins {
 	id 'idea'
 }
 
-compileJava {
-	sourceCompatibility '13'
+java {
+	sourceCompatibility JavaVersion.VERSION_13
 }
 
 repositories {
