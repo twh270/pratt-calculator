@@ -150,7 +150,7 @@ public class CalculatorParser {
         }
     }
 
-    static class IdentifierNode extends Parser.Node {
+    static class IdentifierNode extends ExpressionNode {
         private final String chars;
 
         IdentifierNode(final String chars) {

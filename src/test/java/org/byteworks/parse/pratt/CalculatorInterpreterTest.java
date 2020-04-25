@@ -87,4 +87,13 @@ public class CalculatorInterpreterTest {
         Assertions.assertEquals("7: NUMBER\n", new String(baos.toByteArray()));
         Assertions.assertEquals("7: NUMBER", testObj.getVariable("x").toString());
     }
+
+    @Test
+    void interpretsVariableAssignmentAndEvaluation() {
+        setUp("x = 3 + 4\nx * 2");
+        testObj.exec(nodes, ps);
+        ps.flush();
+        Assertions.assertEquals("7: NUMBER\n14: NUMBER\n", new String(baos.toByteArray()));
+        Assertions.assertEquals("7: NUMBER", testObj.getVariable("x").toString());
+    }
 }

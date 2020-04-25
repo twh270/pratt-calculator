@@ -56,6 +56,14 @@ public class CalculatorInterpreter {
             } catch (NumberFormatException e) {
                 throw new IllegalStateException("Unable to parse literal " + literal.getValue() + " in expression " + expression);
             }
+        } else if (expression instanceof CalculatorParser.IdentifierNode) {
+            CalculatorParser.IdentifierNode ident = (CalculatorParser.IdentifierNode) expression;
+            String identName = ident.getChars();
+            if (!variables.containsKey(identName)) {
+                throw new IllegalStateException("Could not resolve variable " + identName);
+            }
+            Value value = variables.get(identName);
+            return value;
         } else if (expression instanceof CalculatorParser.UnaryOpNode) {
             CalculatorParser.UnaryOpNode unaryOp = (CalculatorParser.UnaryOpNode) expression;
             if (!(unaryOp.getExpr() instanceof CalculatorParser.ExpressionNode)) {
@@ -74,19 +82,6 @@ public class CalculatorInterpreter {
             }
         } else if (expression instanceof CalculatorParser.BinaryOpNode) {
             CalculatorParser.BinaryOpNode binaryOp = (CalculatorParser.BinaryOpNode) expression;
-            if (binaryOp instanceof CalculatorParser.AssignmentNode) {
-                if (!(binaryOp.getLhs() instanceof CalculatorParser.IdentifierNode)) {
-                    throw new IllegalStateException("The left hand side of an assignment must be a variable in expression " + binaryOp);
-                }
-                if (!(binaryOp.getRhs() instanceof CalculatorParser.ExpressionNode)) {
-                    throw new IllegalStateException("Expected an expression for rhs of " + expression + " but got " + binaryOp.getLhs().getClass().getSimpleName() + " instead");
-                }
-                CalculatorParser.IdentifierNode ident = (CalculatorParser.IdentifierNode) binaryOp.getLhs();
-                CalculatorParser.ExpressionNode rhs = (CalculatorParser.ExpressionNode) binaryOp.getRhs();
-                Value value = evaluateExpression(rhs);
-                variables.put(ident.getChars(), value);
-                return value;
-            }
             if (!(binaryOp.getLhs() instanceof CalculatorParser.ExpressionNode)) {
                 throw new IllegalStateException("Expected an expression for lhs of " + expression + " but got " + binaryOp.getLhs().getClass().getSimpleName() + " instead");
             }
@@ -95,6 +90,15 @@ public class CalculatorInterpreter {
             }
             CalculatorParser.ExpressionNode lhs = (CalculatorParser.ExpressionNode) binaryOp.getLhs();
             CalculatorParser.ExpressionNode rhs = (CalculatorParser.ExpressionNode) binaryOp.getRhs();
+            if (binaryOp instanceof CalculatorParser.AssignmentNode) {
+                if (!(binaryOp.getLhs() instanceof CalculatorParser.IdentifierNode)) {
+                    throw new IllegalStateException("The left hand side of an assignment must be a variable in expression " + binaryOp);
+                }
+                CalculatorParser.IdentifierNode ident = (CalculatorParser.IdentifierNode) binaryOp.getLhs();
+                Value value = evaluateExpression(rhs);
+                variables.put(ident.getChars(), value);
+                return value;
+            }
             Value left = evaluateExpression(lhs);
             Value right = evaluateExpression(rhs);
             if (binaryOp instanceof CalculatorParser.PlusNode) {
