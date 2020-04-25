@@ -47,18 +47,24 @@ public class Interpreter {
                 Long longValue = Long.parseLong(literal.getValue());
                 return new Value(longValue, Type.NUMBER);
             } catch (NumberFormatException e) {
-                throw new IllegalStateException("Unable to parse literal " + literal.getValue());
+                throw new IllegalStateException("Unable to parse literal " + literal.getValue() + " in expression " + expression);
             }
         } else if (expression instanceof Parser.UnaryOpNode) {
             Parser.UnaryOpNode unaryOp = (Parser.UnaryOpNode) expression;
             if (!(unaryOp.getExpr() instanceof Parser.ExpressionNode)) {
-                throw new IllegalStateException("Negation expected an expression but got " + unaryOp.getExpr());
+                throw new IllegalStateException("Unary operator expected an expression but got " + unaryOp.getExpr() + " in expression " + expression);
             }
             Value value = evaluateExpression((Parser.ExpressionNode) unaryOp.getExpr());
             if (value.getType() != Type.NUMBER) {
-                throw new IllegalStateException("Negation expected a number but got " + value);
+                throw new IllegalStateException("Unary operator expected a number but got " + value + " in expression " + expression);
             }
-            return new Value(-((Long)value.getValue()), Type.NUMBER);
+            if (unaryOp instanceof Parser.NegativeSigned) {
+                return new Value(-((Long) value.getValue()), Type.NUMBER);
+            } else if (unaryOp instanceof Parser.PositiveSigned) {
+                return new Value(value.getValue(), Type.NUMBER);
+            } else {
+                throw new IllegalStateException("Unknown unary operator " + unaryOp + " in expression " + expression);
+            }
         } else if (expression instanceof Parser.BinaryOpNode) {
             Parser.BinaryOpNode binaryOp = (Parser.BinaryOpNode) expression;
             if (!(binaryOp.getLhs() instanceof Parser.ExpressionNode)) {
@@ -80,7 +86,7 @@ public class Interpreter {
             } else if (binaryOp instanceof Parser.DivideNode) {
                 return binaryDiv(left, right);
             } else {
-                throw new IllegalStateException("Don't know how to evaluate binary operator " + expression.getClass().getSimpleName());
+                throw new IllegalStateException("Don't know how to evaluate binary operator " + expression.getClass().getSimpleName() + " in expression " + expression);
             }
         }
         throw new IllegalStateException("Don't know how to evaluate expression " + expression);

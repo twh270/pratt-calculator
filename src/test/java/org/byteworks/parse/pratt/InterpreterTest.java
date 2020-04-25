@@ -56,11 +56,19 @@ public class InterpreterTest {
     }
 
     @Test
-    void interpretsExpressionWithNegativeNumber() {
+    void interpretsExpressionWithNegativeSignedNumber() {
         setUp("-3 + 4");
         testObj.exec(nodes, ps);
         ps.flush();
         Assertions.assertEquals("1: NUMBER\n", new String(baos.toByteArray()));
+    }
+
+    @Test
+    void interpretsExpressionWithPositiveSignedNumber() {
+        setUp("3 + +4");
+        testObj.exec(nodes, ps);
+        ps.flush();
+        Assertions.assertEquals("7: NUMBER\n", new String(baos.toByteArray()));
     }
 
     @Test

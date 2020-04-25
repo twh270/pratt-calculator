@@ -43,9 +43,11 @@ public class Parser {
 
     public static class UnaryOpNode extends ExpressionNode {
         private final Node expr;
+        private final String op;
 
-        public UnaryOpNode(final Node expr) {
+        public UnaryOpNode(final Node expr, String op) {
             this.expr = expr;
+            this.op = op;
         }
 
         public Node getExpr() {
@@ -54,14 +56,19 @@ public class Parser {
 
         @Override
         public String toString() {
-            return "-(" + expr.toString() + ")";
+            return op + "(" + expr.toString() + ")";
         }
     }
 
-    public static class NegationNode extends UnaryOpNode {
+    public static class NegativeSigned extends UnaryOpNode {
+        public NegativeSigned(final Node expr) {
+            super(expr, "-");
+        }
+    }
 
-        public NegationNode(final Node expr) {
-            super(expr);
+    public static class PositiveSigned extends UnaryOpNode {
+        public PositiveSigned(final Node expr) {
+            super(expr, "+");
         }
     }
 
@@ -119,7 +126,7 @@ public class Parser {
         static final Pair<Integer,Integer> PARENS = new Pair<>(-1, 0);
         static final Pair<Integer, Integer> PLUS_MINUS = new Pair<>(3, 4);
         static final Pair<Integer,Integer> MULT_DIV = new Pair<>(7, 8);
-        static final Pair<Integer,Integer> NEGATION = new Pair<>(9, 10);
+        static final Pair<Integer,Integer> SIGNED = new Pair<>(9, 10);
     }
 
     public List<Node> parse(Lexer lexer) {
@@ -134,8 +141,11 @@ public class Parser {
         } else if (token instanceof Lexer.Number) {
             node = new LiteralNode(token.getChars());
         } else if (token instanceof Lexer.Minus) {
-            Node expr = parse(lexer, PrecedencePairs.NEGATION.right);
-            node = new NegationNode(expr);
+            Node expr = parse(lexer, PrecedencePairs.SIGNED.right);
+            node = new NegativeSigned(expr);
+        } else if (token instanceof Lexer.Plus) {
+            Node expr = parse(lexer, PrecedencePairs.SIGNED.right);
+            node = new PositiveSigned(expr);
         } else if (token instanceof Lexer.LParen) {
             Node expr = parse(lexer, PrecedencePairs.PARENS.right);
             token = lexer.next();
