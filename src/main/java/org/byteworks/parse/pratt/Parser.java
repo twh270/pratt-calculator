@@ -1,7 +1,9 @@
 package org.byteworks.parse.pratt;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Parser {
     private static class Pair<L, R> {
@@ -135,23 +137,7 @@ public class Parser {
     private Node parse(final Lexer lexer, final int precedence) {
         Node node = null;
         Lexer.Token token = lexer.next();
-        if (token instanceof Lexer.Eof) {
-            return new EmptyNode();
-        } else if (token instanceof Lexer.Number) {
-            node = new LiteralNode(token.getChars());
-        } else if (token instanceof Lexer.Minus) {
-            Node expr = parse(lexer, PrecedencePairs.SIGNED.right);
-            node = new NegativeSigned(expr);
-        } else if (token instanceof Lexer.Plus) {
-            Node expr = parse(lexer, PrecedencePairs.SIGNED.right);
-            node = new PositiveSigned(expr);
-        } else if (token instanceof Lexer.LParen) {
-            Node expr = parse(lexer, PrecedencePairs.PARENS.right);
-            if (!((token = lexer.next()) instanceof Lexer.RParen)) {
-                throw new IllegalStateException("Expected a right parenthesis but got " + token);
-            }
-            node = expr;
-        }
+        node = parseFirstNode(lexer, token);
         while (true) {
             token = lexer.peek();
             Pair<Integer, Integer> precedencePair = precedence(token);
@@ -171,6 +157,44 @@ public class Parser {
             } else {
                 throw new IllegalArgumentException("Could not parse " + token.toString());
             }
+        }
+        return node;
+    }
+
+    interface PrefixParser {
+        Node parse(Lexer.Token token, Parser parser);
+    }
+
+    class EofPrefixParser implements PrefixParser {
+
+        @Override
+        public Node parse(final Lexer.Token token, final Parser parser) {
+            return new EmptyNode();
+        }
+    }
+
+    private Map<Lexer.TokenType, PrefixParser> prefixParsers = new HashMap<>();
+
+    private Node parseFirstNode(final Lexer lexer, Lexer.Token token) {
+        Node node;
+        if (token instanceof Lexer.Eof) {
+            node = new EmptyNode();
+        } else if (token instanceof Lexer.Number) {
+            node = new LiteralNode(token.getChars());
+        } else if (token instanceof Lexer.Minus) {
+            Node expr = parse(lexer, PrecedencePairs.SIGNED.right);
+            node = new NegativeSigned(expr);
+        } else if (token instanceof Lexer.Plus) {
+            Node expr = parse(lexer, PrecedencePairs.SIGNED.right);
+            node = new PositiveSigned(expr);
+        } else if (token instanceof Lexer.LParen) {
+            Node expr = parse(lexer, PrecedencePairs.PARENS.right);
+            if (!((token = lexer.next()) instanceof Lexer.RParen)) {
+                throw new IllegalStateException("Expected a right parenthesis but got " + token);
+            }
+            node = expr;
+        } else {
+            throw new IllegalArgumentException("Invalid token " + token);
         }
         return node;
     }

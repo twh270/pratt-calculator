@@ -1,16 +1,42 @@
 package org.byteworks.parse.pratt;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class Lexer {
     private final String input;
     private int pos;
 
     public Lexer(String input) { this.input = input; }
 
+    public enum TokenType {
+        UNKNOWN, PLUS, MINUS, MULTIPLY, DIVIDE, LPAREN, RPAREN, EOF, NUMBER;
+
+        private static Map<String, TokenType> charsToToken = new HashMap<>();
+        static {
+            charsToToken.put("+", PLUS);
+            charsToToken.put("-", MINUS);
+            charsToToken.put("*", MULTIPLY);
+            charsToToken.put("/", DIVIDE);
+            charsToToken.put("(", LPAREN);
+            charsToToken.put(")", RPAREN);
+        }
+        static TokenType from(String chars) {
+            TokenType type = charsToToken.get(chars);
+            if (type == null) {
+                throw new IllegalArgumentException("Unknown characters '" + chars +"' used to look up token type");
+            }
+            return type;
+        }
+    }
+
     public static class Token {
         private final String chars;
-        public Token() { this.chars = ""; }
-        public Token(String chars) { this.chars = chars; }
+        private final TokenType type;
+        public Token(String chars) { this.chars = chars; this.type = TokenType.from(chars); }
+        public Token(String chars, TokenType type) { this.chars = chars; this.type = type; }
         public String getChars() { return chars; }
+        public TokenType getType() { return type; }
 
         final static Eof EOF = new Eof();
         final static Plus PLUS = new Plus();
@@ -22,19 +48,22 @@ public class Lexer {
 
         @Override
         public String toString() {
-            return "Token." + this.getClass().getSimpleName() + "(" + chars + ")";
+            return "Token." + this.getClass().getSimpleName() + "(type=" + type + ", chars='" + chars + "')";
         }
     }
 
     public static class Number extends Token {
-        public Number(String chars) { super(chars); }
+        public Number(String chars) { super(chars, TokenType.NUMBER); }
     }
 
     public static class Eof extends Token {
+        public Eof() {
+            super("", TokenType.EOF);
+        }
     }
 
     public static class Unknown extends Token {
-        public Unknown(String chars) { super(chars); }
+        public Unknown(String chars) { super(chars, TokenType.UNKNOWN); }
     }
 
     public static class Plus extends Token {
