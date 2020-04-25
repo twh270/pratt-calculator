@@ -86,4 +86,24 @@ class CalculatorParserTest {
         ast.stream().forEach(sb::append);
         Assertions.assertEquals("(* (+ 3 4) 6)", sb.toString());
     }
+
+    @Test
+    void simpleVariableAssignmentTest() {
+        Lexer lexer = new Lexer("x = 3");
+        Parser parser = CalculatorParser.createParser();
+        List<Parser.Node> ast = parser.parse(lexer);
+        StringBuilder sb = new StringBuilder();
+        ast.stream().forEach(sb::append);
+        Assertions.assertEquals("(= x 3)", sb.toString());
+    }
+
+    @Test
+    void expressionVariableAssignmentTest() {
+        Lexer lexer = new Lexer("x = 3 * (4 + 9)");
+        Parser parser = CalculatorParser.createParser();
+        List<Parser.Node> ast = parser.parse(lexer);
+        StringBuilder sb = new StringBuilder();
+        ast.stream().forEach(sb::append);
+        Assertions.assertEquals("(= x (* 3 (+ 4 9)))", sb.toString());
+    }
 }

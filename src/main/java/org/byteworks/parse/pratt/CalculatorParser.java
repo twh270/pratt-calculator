@@ -8,31 +8,34 @@ public class CalculatorParser {
     private static final Map<Lexer.TokenType, Parser.InfixParser> infixParsers = new HashMap<>();
     private static final Map<Lexer.TokenType, Parser.Pair<Integer, Integer>> tokenPrecedence = new HashMap<>();
 
-
     static {
         infixParsers.put(Lexer.TokenType.PLUS, new PlusInfixParser());
         infixParsers.put(Lexer.TokenType.MINUS, new MinusInfixParser());
         infixParsers.put(Lexer.TokenType.MULTIPLY, new MultInfixParser());
         infixParsers.put(Lexer.TokenType.DIVIDE, new DivideInfixParser());
+        infixParsers.put(Lexer.TokenType.ASSIGNMENT, new AssignmentInfixParser());
         prefixParsers.put(Lexer.TokenType.EOF, new EofPrefixParser());
         prefixParsers.put(Lexer.TokenType.NUMBER, new NumberPrefixParser());
         prefixParsers.put(Lexer.TokenType.MINUS, new MinusPrefixParser());
         prefixParsers.put(Lexer.TokenType.PLUS, new PlusPrefixParser());
         prefixParsers.put(Lexer.TokenType.LPAREN, new LParenPrefixParser());
+        prefixParsers.put(Lexer.TokenType.IDENTIFIER, new IdentifierPrefixParser());
         tokenPrecedence.put(Lexer.TokenType.PLUS, PrecedencePairs.PLUS_MINUS);
         tokenPrecedence.put(Lexer.TokenType.MINUS, PrecedencePairs.PLUS_MINUS);
         tokenPrecedence.put(Lexer.TokenType.MULTIPLY, PrecedencePairs.MULT_DIV);
         tokenPrecedence.put(Lexer.TokenType.DIVIDE, PrecedencePairs.MULT_DIV);
         tokenPrecedence.put(Lexer.TokenType.EOF, PrecedencePairs.EOF);
         tokenPrecedence.put(Lexer.TokenType.RPAREN, PrecedencePairs.PARENS);
+        tokenPrecedence.put(Lexer.TokenType.ASSIGNMENT, PrecedencePairs.ASSIGNMENT);
     }
 
     static class PrecedencePairs {
         static final Parser.Pair<Integer,Integer> EOF = new Parser.Pair<>(-1, 0);
         static final Parser.Pair<Integer,Integer> PARENS = new Parser.Pair<>(-1, 0);
-        static final Parser.Pair<Integer, Integer> PLUS_MINUS = new Parser.Pair<>(3, 4);
+        static final Parser.Pair<Integer,Integer> PLUS_MINUS = new Parser.Pair<>(3, 4);
         static final Parser.Pair<Integer,Integer> MULT_DIV = new Parser.Pair<>(7, 8);
         static final Parser.Pair<Integer,Integer> SIGNED = new Parser.Pair<>(9, 10);
+        static final Parser.Pair<Integer,Integer> ASSIGNMENT = new Parser.Pair<>(1, 2);
     }
 
     public static class EmptyNode extends Parser.Node {
@@ -114,27 +117,50 @@ public class CalculatorParser {
         }
     }
 
-    public static class PlusNode extends BinaryOpNode {
+    static class PlusNode extends BinaryOpNode {
         public PlusNode(final Parser.Node lhs, final Parser.Node rhs) {
             super(lhs, rhs, "+");
         }
     }
 
-    public static class MinusNode extends BinaryOpNode {
+    static class MinusNode extends BinaryOpNode {
         public MinusNode(final Parser.Node lhs, final Parser.Node rhs) {
             super(lhs, rhs, "-");
         }
     }
 
-    public static class MultNode extends BinaryOpNode {
+    static class MultNode extends BinaryOpNode {
         public MultNode(final Parser.Node lhs, final Parser.Node rhs) {
             super(lhs, rhs, "*");
         }
     }
 
-    public static class DivideNode extends BinaryOpNode {
+    static class DivideNode extends BinaryOpNode {
         public DivideNode(final Parser.Node lhs, final Parser.Node rhs) {
             super(lhs, rhs, "/");
+        }
+    }
+
+    static class AssignmentNode extends BinaryOpNode {
+        public AssignmentNode(final Parser.Node lhs, final Parser.Node rhs) {
+            super(lhs, rhs, "=");
+        }
+    }
+
+    static class IdentifierNode extends Parser.Node {
+        private final String chars;
+
+        IdentifierNode(final String chars) {
+            this.chars = chars;
+        }
+
+        public String getChars() {
+            return chars;
+        }
+
+        @Override
+        public String toString() {
+            return chars;
         }
     }
 
@@ -185,6 +211,14 @@ public class CalculatorParser {
         }
     }
 
+    static class IdentifierPrefixParser implements Parser.PrefixParser {
+
+        @Override
+        public Parser.Node parse(final Lexer.Token token, final Parser parser, final Lexer lexer) {
+            return new IdentifierNode(token.getChars());
+        }
+    }
+
     static class PlusInfixParser implements Parser.InfixParser {
 
         @Override
@@ -218,6 +252,15 @@ public class CalculatorParser {
         public Parser.Node parse(final Parser.Node node, final Lexer.Token token, final Parser parser, final Lexer lexer) {
             Parser.Node rhs = parser.parse(lexer, PrecedencePairs.MULT_DIV.getRight());
             return new DivideNode(node, rhs);
+        }
+    }
+
+    static class AssignmentInfixParser implements Parser.InfixParser {
+
+        @Override
+        public Parser.Node parse(final Parser.Node node, final Lexer.Token token, final Parser parser, final Lexer lexer) {
+            Parser.Node rhs = parser.parse(lexer, PrecedencePairs.ASSIGNMENT.getRight());
+            return new AssignmentNode(node, rhs);
         }
     }
 

@@ -28,7 +28,7 @@ public class CalculatorInterpreterTest {
         setUp("1 + 2");
         testObj.exec(nodes, ps);
         ps.flush();
-        Assertions.assertEquals("5: NUMBER\n", new String(baos.toByteArray()));
+        Assertions.assertEquals("3: NUMBER\n", new String(baos.toByteArray()));
     }
 
     @Test

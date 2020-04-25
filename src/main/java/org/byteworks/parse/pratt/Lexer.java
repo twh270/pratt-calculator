@@ -10,7 +10,8 @@ public class Lexer {
     public Lexer(String input) { this.input = input; }
 
     public enum TokenType {
-        UNKNOWN, PLUS, MINUS, MULTIPLY, DIVIDE, LPAREN, RPAREN, EOF, NUMBER;
+        UNKNOWN, PLUS, MINUS, MULTIPLY, DIVIDE, LPAREN, RPAREN, EOF, NUMBER, IDENTIFIER,
+        ASSIGNMENT;
 
         private static Map<String, TokenType> charsToToken = new HashMap<>();
         static {
@@ -20,6 +21,7 @@ public class Lexer {
             charsToToken.put("/", DIVIDE);
             charsToToken.put("(", LPAREN);
             charsToToken.put(")", RPAREN);
+            charsToToken.put("=", ASSIGNMENT);
         }
         static TokenType from(String chars) {
             TokenType type = charsToToken.get(chars);
@@ -45,6 +47,7 @@ public class Lexer {
         final static Divide DIVIDE = new Divide();
         final static LParen LPAREN = new LParen();
         final static RParen RPAREN = new RParen();
+        final static Assignment ASSIGNMENT = new Assignment();
 
         @Override
         public String toString() {
@@ -53,21 +56,25 @@ public class Lexer {
     }
 
     public static class Number extends Token {
-        public Number(String chars) { super(chars, TokenType.NUMBER); }
+        Number(String chars) { super(chars, TokenType.NUMBER); }
+    }
+
+    public static class Identifier extends Token {
+        Identifier(String chars) { super(chars, TokenType.IDENTIFIER); }
     }
 
     public static class Eof extends Token {
-        public Eof() {
+        Eof() {
             super("", TokenType.EOF);
         }
     }
 
     public static class Unknown extends Token {
-        public Unknown(String chars) { super(chars, TokenType.UNKNOWN); }
+        Unknown(String chars) { super(chars, TokenType.UNKNOWN); }
     }
 
     public static class Plus extends Token {
-        public Plus() { super("+"); }
+        Plus() { super("+"); }
     }
 
     public static class Minus extends Token {
@@ -75,19 +82,27 @@ public class Lexer {
     }
 
     public static class Mult extends Token {
-        public Mult() { super("*"); }
+        Mult() { super("*"); }
     }
 
     public static class Divide extends Token {
-        public Divide() { super("/"); }
+        Divide() { super("/"); }
     }
 
     public static class LParen extends Token {
-        public LParen() { super("("); }
+        LParen() { super("("); }
     }
 
-    public static class RParen extends Token {
-        public RParen() { super(")"); }
+    static class RParen extends Token {
+        RParen() { super(")"); }
+    }
+
+    static class Assignment extends Token {
+        Assignment() { super("="); }
+    }
+
+    private boolean isIdentifierCharacter(char ch) {
+        return Character.isAlphabetic(ch) || '_' == ch;
     }
 
     public Token next() {
@@ -108,7 +123,15 @@ public class Lexer {
                 pos++;
             }
             return new Number(sb.toString());
-        } else if (ch == '+') {
+        } else if (isIdentifierCharacter(ch)) {
+            StringBuilder sb = new StringBuilder().append(ch);
+            while (available() && isIdentifierCharacter(ch = peek_ch())) {
+                sb.append(ch);
+                pos++;
+            }
+            return new Identifier(sb.toString());
+        }
+        else if (ch == '+') {
             return Token.PLUS;
         } else if (ch == '-') {
             return Token.MINUS;
@@ -120,6 +143,8 @@ public class Lexer {
             return Token.LPAREN;
         } else if (ch == ')') {
             return Token.RPAREN;
+        } else if (ch == '=') {
+            return Token.ASSIGNMENT;
         }
         return new Unknown(String.valueOf(ch));
     }
