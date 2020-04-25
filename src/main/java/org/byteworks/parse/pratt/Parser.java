@@ -135,32 +135,66 @@ public class Parser {
     }
 
     private Node parse(final Lexer lexer, final int precedence) {
+        infixParsers.put(Lexer.TokenType.PLUS, new PlusInfixParser());
+        infixParsers.put(Lexer.TokenType.MINUS, new MinusInfixParser());
+        infixParsers.put(Lexer.TokenType.MULTIPLY, new MultInfixParser());
+        infixParsers.put(Lexer.TokenType.DIVIDE, new DivideInfixParser());
         Lexer.Token token = lexer.next();
         Node node = parseFirstNode(lexer, token);
-        while (parseInfix(lexer, precedence)) {
+        while (shouldParseInfix(lexer, precedence)) {
             token = lexer.next();
-            Pair<Integer, Integer> precedencePair = precedence(token);
-            Node rhs = parse(lexer, precedencePair.right);
-            if (token instanceof Lexer.Plus) {
-                node = new PlusNode(node, rhs);
-            } else if (token instanceof Lexer.Minus) {
-                node = new MinusNode(node, rhs);
-            } else if (token instanceof Lexer.Mult) {
-                node = new MultNode(node, rhs);
-            } else if (token instanceof Lexer.Divide) {
-                node = new DivideNode(node, rhs);
-            } else {
-                throw new IllegalArgumentException("Could not parse " + token.toString());
-            }
+            node = infixParsers.get(token.getType()).parse(node, token, this, lexer);
         }
         return node;
     }
 
-    private boolean parseInfix(Lexer lexer, int precedence) {
+    private boolean shouldParseInfix(Lexer lexer, int precedence) {
         Lexer.Token token = lexer.peek();
         final Pair<Integer, Integer> precedencePair = precedence(token);
         return precedencePair.left >= precedence;
     }
+
+    interface InfixParser {
+        Node parse(Node node, Lexer.Token token, Parser parser, Lexer lexer);
+    }
+
+    class PlusInfixParser implements InfixParser {
+
+        @Override
+        public Node parse(final Node node, final Lexer.Token token, final Parser parser, final Lexer lexer) {
+            Node rhs = parser.parse(lexer, PrecedencePairs.PLUS_MINUS.right);
+            return new PlusNode(node, rhs);
+        }
+    }
+
+    class MinusInfixParser implements InfixParser {
+
+        @Override
+        public Node parse(final Node node, final Lexer.Token token, final Parser parser, final Lexer lexer) {
+            Node rhs = parser.parse(lexer, PrecedencePairs.PLUS_MINUS.right);
+            return new MinusNode(node, rhs);
+        }
+    }
+
+    class MultInfixParser implements InfixParser {
+
+        @Override
+        public Node parse(final Node node, final Lexer.Token token, final Parser parser, final Lexer lexer) {
+            Node rhs = parser.parse(lexer, PrecedencePairs.MULT_DIV.right);
+            return new MultNode(node, rhs);
+        }
+    }
+
+    class DivideInfixParser implements InfixParser {
+
+        @Override
+        public Node parse(final Node node, final Lexer.Token token, final Parser parser, final Lexer lexer) {
+            Node rhs = parser.parse(lexer, PrecedencePairs.MULT_DIV.right);
+            return new DivideNode(node, rhs);
+        }
+    }
+
+    private Map<Lexer.TokenType, InfixParser> infixParsers = new HashMap<>();
 
     interface PrefixParser {
         Node parse(Lexer.Token token, Parser parser, Lexer lexer);
@@ -227,17 +261,16 @@ public class Parser {
         throw new IllegalArgumentException("Invalid token " + token);
     }
 
+    private Map<Lexer.TokenType, Pair<Integer, Integer>> tokenPrecedence = new HashMap<>();
+
     private Pair<Integer, Integer> precedence(Lexer.Token token) {
-        if (token instanceof Lexer.Plus || token instanceof Lexer.Minus) {
-            return PrecedencePairs.PLUS_MINUS;
-        } else if (token instanceof Lexer.Mult || token instanceof Lexer.Divide) {
-            return PrecedencePairs.MULT_DIV;
-        } else if (token instanceof Lexer.Eof) {
-            return PrecedencePairs.EOF;
-        } else if (token instanceof Lexer.RParen) {
-            return PrecedencePairs.PARENS;
-        }
-        throw new IllegalStateException("Bad token " + token.getChars());
+        tokenPrecedence.put(Lexer.TokenType.PLUS, PrecedencePairs.PLUS_MINUS);
+        tokenPrecedence.put(Lexer.TokenType.MINUS, PrecedencePairs.PLUS_MINUS);
+        tokenPrecedence.put(Lexer.TokenType.MULTIPLY, PrecedencePairs.MULT_DIV);
+        tokenPrecedence.put(Lexer.TokenType.DIVIDE, PrecedencePairs.MULT_DIV);
+        tokenPrecedence.put(Lexer.TokenType.EOF, PrecedencePairs.EOF);
+        tokenPrecedence.put(Lexer.TokenType.RPAREN, PrecedencePairs.PARENS);
+        return tokenPrecedence.get(token.getType());
     }
 
 }
