@@ -17,6 +17,11 @@ public class Lexer {
         final static Minus MINUS = new Minus();
         final static Mult MULT = new Mult();
         final static Divide DIVIDE = new Divide();
+
+        @Override
+        public String toString() {
+            return "Token." + this.getClass().getSimpleName() + "(" + chars + ")";
+        }
     }
 
     public static class Number extends Token {

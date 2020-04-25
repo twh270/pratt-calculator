@@ -5,22 +5,35 @@ import java.util.List;
 import java.util.function.BiFunction;
 
 public class Parser {
-    private static class Pair<L,R> {
+    private static class Pair<L, R> {
         public final L left;
         public final R right;
-        public Pair(L left, R right) { this.left = left; this.right = right; }
+
+        public Pair(L left, R right) {
+            this.left = left;
+            this.right = right;
+        }
     }
 
     public static class Node {
     }
 
-    public static class ExpressionNode extends Node {
+    public static class EmptyNode extends Node {
+    }
 
+    public static class ExpressionNode extends Node {
     }
 
     public static class LiteralNode extends ExpressionNode {
         private final String value;
-        public LiteralNode(String value) { this.value = value; }
+
+        public LiteralNode(String value) {
+            this.value = value;
+        }
+
+        public String getValue() {
+            return value;
+        }
 
         @Override
         public String toString() {
@@ -28,47 +41,50 @@ public class Parser {
         }
     }
 
-    public static class PlusNode extends ExpressionNode {
+    public static class BinaryOpNode extends ExpressionNode {
         private final Node lhs;
         private final Node rhs;
-        public PlusNode(Node lhs, Node rhs) { this.lhs = lhs; this.rhs = rhs; }
+
+        public BinaryOpNode(Node lhs, Node rhs) {
+            this.lhs = lhs;
+            this.rhs = rhs;
+        }
+
+        public Node getLhs() {
+            return lhs;
+        }
+
+        public Node getRhs() {
+            return rhs;
+        }
 
         @Override
         public String toString() {
-            return "(+ " + lhs.toString() + " " + rhs.toString() + ")";
+            return "BinaryOp." + this.getClass().getSimpleName() + "(+ " + lhs.toString() + " " + rhs.toString() + ")";
         }
     }
 
-    public static class MinusNode extends ExpressionNode {
-        private final Node lhs;
-        private final Node rhs;
-        public MinusNode(Node lhs, Node rhs) { this.lhs = lhs; this.rhs = rhs; }
-
-        @Override
-        public String toString() {
-            return "(- " + lhs.toString() + " " + rhs.toString() + ")";
+    public static class PlusNode extends BinaryOpNode {
+        public PlusNode(final Node lhs, final Node rhs) {
+            super(lhs, rhs);
         }
     }
 
-    public static class MultNode extends ExpressionNode {
-        private final Node lhs;
-        private final Node rhs;
-        public MultNode(Node lhs, Node rhs) { this.lhs = lhs; this.rhs = rhs; }
-
-        @Override
-        public String toString() {
-            return "(* " + lhs.toString() + " " + rhs.toString() + ")";
+    public static class MinusNode extends BinaryOpNode {
+        public MinusNode(final Node lhs, final Node rhs) {
+            super(lhs, rhs);
         }
     }
 
-    public static class DivideNode extends ExpressionNode {
-        private final Node lhs;
-        private final Node rhs;
-        public DivideNode(Node lhs, Node rhs) { this.lhs = lhs; this.rhs = rhs; }
+    public static class MultNode extends BinaryOpNode {
+        public MultNode(final Node lhs, final Node rhs) {
+            super(lhs, rhs);
+        }
+    }
 
-        @Override
-        public String toString() {
-            return "(/ " + lhs.toString() + " " + rhs.toString() + ")";
+    public static class DivideNode extends BinaryOpNode {
+        public DivideNode(final Node lhs, final Node rhs) {
+            super(lhs, rhs);
         }
     }
 
@@ -84,14 +100,13 @@ public class Parser {
     private Node parse(final Lexer lexer, final int precedence) {
         Node node = null;
         Lexer.Token token = lexer.next();
-        if (token instanceof Lexer.Number) {
+        if (token instanceof Lexer.Eof) {
+            return new EmptyNode();
+        } else if (token instanceof Lexer.Number) {
             node = new LiteralNode(token.getChars());
         }
         while (true) {
             token = lexer.peek();
-            if (token instanceof Lexer.Eof) {
-                break;
-            }
             Pair<Integer, Integer> precedencePair = precedence(token);
             if (precedencePair.left < precedence) {
                 break;
@@ -107,14 +122,14 @@ public class Parser {
             } else if (token instanceof Lexer.Divide) {
                 node = rebuild(this::buildDivide, node, rhs);
             } else {
-                throw new IllegalArgumentException("Could not parse " + token.getClass().getSimpleName() + "[" + token.getChars() + "]");
+                throw new IllegalArgumentException("Could not parse " + token.toString());
             }
         }
         return node;
     }
 
-    private Node rebuild(final BiFunction<Node, Node, Node> ctor, final Node ast, final Node rhs) {
-        Node node = ctor.apply(ast, rhs);
+    private Node rebuild(final BiFunction<Node, Node, Node> ctor, final Node lhs, final Node rhs) {
+        Node node = ctor.apply(lhs, rhs);
         return node;
     }
 
@@ -137,9 +152,10 @@ public class Parser {
     private Pair<Integer, Integer> precedence(Lexer.Token token) {
         if (token instanceof Lexer.Plus || token instanceof Lexer.Minus) {
             return new Pair(1, 2);
-        }
-        if (token instanceof Lexer.Mult || token instanceof Lexer.Divide) {
+        } else if (token instanceof Lexer.Mult || token instanceof Lexer.Divide) {
             return new Pair(3, 4);
+        } else if (token instanceof Lexer.Eof) {
+            return new Pair(-1, 0);
         }
         throw new IllegalStateException("Bad token " + token.getChars());
     }

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 class ParserTest {
+
     @Test
     void parseAddition() {
         Lexer lexer = new Lexer("1 + 2");
@@ -27,7 +28,7 @@ class ParserTest {
     }
 
     @Test
-    void parseExpression() {
+    void parseSimpleExpression() {
         Lexer lexer = new Lexer("1 + 2 * 3");
         Parser parser = new Parser();
         List<Parser.Node> ast = parser.parse(lexer);
