@@ -135,16 +135,11 @@ public class Parser {
     }
 
     private Node parse(final Lexer lexer, final int precedence) {
-        Node node = null;
         Lexer.Token token = lexer.next();
-        node = parseFirstNode(lexer, token);
-        while (true) {
-            token = lexer.peek();
+        Node node = parseFirstNode(lexer, token);
+        while (parseInfix(lexer, precedence)) {
+            token = lexer.next();
             Pair<Integer, Integer> precedencePair = precedence(token);
-            if (precedencePair.left < precedence) {
-                break;
-            }
-            lexer.next();
             Node rhs = parse(lexer, precedencePair.right);
             if (token instanceof Lexer.Plus) {
                 node = new PlusNode(node, rhs);
@@ -161,15 +156,60 @@ public class Parser {
         return node;
     }
 
+    private boolean parseInfix(Lexer lexer, int precedence) {
+        Lexer.Token token = lexer.peek();
+        final Pair<Integer, Integer> precedencePair = precedence(token);
+        return precedencePair.left >= precedence;
+    }
+
     interface PrefixParser {
-        Node parse(Lexer.Token token, Parser parser);
+        Node parse(Lexer.Token token, Parser parser, Lexer lexer);
     }
 
     class EofPrefixParser implements PrefixParser {
 
         @Override
-        public Node parse(final Lexer.Token token, final Parser parser) {
+        public Node parse(final Lexer.Token token, final Parser parser, Lexer lexer) {
             return new EmptyNode();
+        }
+    }
+
+    class NumberPrefixParser implements PrefixParser {
+
+        @Override
+        public Node parse(final Lexer.Token token, final Parser parser, Lexer lexer) {
+            return new LiteralNode(token.getChars());
+        }
+    }
+
+    class MinusPrefixParser implements PrefixParser {
+
+        @Override
+        public Node parse(final Lexer.Token token, final Parser parser, Lexer lexer) {
+            Node expr = parser.parse(lexer, PrecedencePairs.SIGNED.right);
+            return new NegativeSigned(expr);
+        }
+    }
+
+    class PlusPrefixParser implements PrefixParser {
+
+        @Override
+        public Node parse(final Lexer.Token token, final Parser parser, final Lexer lexer) {
+            Node expr = parser.parse(lexer, PrecedencePairs.SIGNED.right);
+            return new PositiveSigned(expr);
+        }
+    }
+
+    class LParenPrefixParser implements PrefixParser {
+
+        @Override
+        public Node parse(final Lexer.Token token, final Parser parser, final Lexer lexer) {
+            Node expr = parser.parse(lexer, PrecedencePairs.PARENS.right);
+            Lexer.Token tok = lexer.next();
+            if (!(tok instanceof Lexer.RParen)) {
+                throw new IllegalStateException("Expected a right parenthesis but got " + tok);
+            }
+            return expr;
         }
     }
 
@@ -177,30 +217,14 @@ public class Parser {
 
     private Node parseFirstNode(final Lexer lexer, Lexer.Token token) {
         prefixParsers.put(Lexer.TokenType.EOF, new EofPrefixParser());
+        prefixParsers.put(Lexer.TokenType.NUMBER, new NumberPrefixParser());
+        prefixParsers.put(Lexer.TokenType.MINUS, new MinusPrefixParser());
+        prefixParsers.put(Lexer.TokenType.PLUS, new PlusPrefixParser());
+        prefixParsers.put(Lexer.TokenType.LPAREN, new LParenPrefixParser());
         if (prefixParsers.get(token.getType()) != null) {
-            return prefixParsers.get(token.getType()).parse(token, this);
+            return prefixParsers.get(token.getType()).parse(token, this, lexer);
         }
-        Node node;
-        if (token instanceof Lexer.Eof) {
-            node = new EmptyNode();
-        } else if (token instanceof Lexer.Number) {
-            node = new LiteralNode(token.getChars());
-        } else if (token instanceof Lexer.Minus) {
-            Node expr = parse(lexer, PrecedencePairs.SIGNED.right);
-            node = new NegativeSigned(expr);
-        } else if (token instanceof Lexer.Plus) {
-            Node expr = parse(lexer, PrecedencePairs.SIGNED.right);
-            node = new PositiveSigned(expr);
-        } else if (token instanceof Lexer.LParen) {
-            Node expr = parse(lexer, PrecedencePairs.PARENS.right);
-            if (!((token = lexer.next()) instanceof Lexer.RParen)) {
-                throw new IllegalStateException("Expected a right parenthesis but got " + token);
-            }
-            node = expr;
-        } else {
-            throw new IllegalArgumentException("Invalid token " + token);
-        }
-        return node;
+        throw new IllegalArgumentException("Invalid token " + token);
     }
 
     private Pair<Integer, Integer> precedence(Lexer.Token token) {
