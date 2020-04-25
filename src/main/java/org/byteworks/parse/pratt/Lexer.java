@@ -74,10 +74,10 @@ public class Lexer {
         }
         if (Character.isDigit(ch)) {
             StringBuilder sb = new StringBuilder().append(ch);
-            while (available() && Character.isDigit(ch = read_ch())) {
+            while (available() && Character.isDigit(ch = peek_ch())) {
                 sb.append(ch);
+                pos++;
             }
-            if (available()) { pos--; }
             return new Number(sb.toString());
         } else if (ch == '+') {
             return Token.PLUS;
@@ -100,6 +100,10 @@ public class Lexer {
         Token token = next();
         pos = savePos;
         return token;
+    }
+
+    private char peek_ch() {
+        return input.charAt(pos);
     }
 
     private char read_ch() {

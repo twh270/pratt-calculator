@@ -148,7 +148,9 @@ public class Parser {
             node = new PositiveSigned(expr);
         } else if (token instanceof Lexer.LParen) {
             Node expr = parse(lexer, PrecedencePairs.PARENS.right);
-            token = lexer.next();
+            if (!((token = lexer.next()) instanceof Lexer.RParen)) {
+                throw new IllegalStateException("Expected a right parenthesis but got " + token);
+            };
             node = expr;
         }
         while (true) {
