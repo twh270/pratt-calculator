@@ -2,7 +2,6 @@ package org.byteworks.parse.pratt;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.function.BiFunction;
 
 public class Parser {
     private static class Pair<L, R> {
@@ -150,7 +149,7 @@ public class Parser {
             Node expr = parse(lexer, PrecedencePairs.PARENS.right);
             if (!((token = lexer.next()) instanceof Lexer.RParen)) {
                 throw new IllegalStateException("Expected a right parenthesis but got " + token);
-            };
+            }
             node = expr;
         }
         while (true) {
@@ -162,39 +161,18 @@ public class Parser {
             lexer.next();
             Node rhs = parse(lexer, precedencePair.right);
             if (token instanceof Lexer.Plus) {
-                node = rebuild(this::buildPlus, node, rhs);
+                node = new PlusNode(node, rhs);
             } else if (token instanceof Lexer.Minus) {
-                node = rebuild(this::buildMinus, node, rhs);
+                node = new MinusNode(node, rhs);
             } else if (token instanceof Lexer.Mult) {
-                node = rebuild(this::buildMult, node, rhs);
+                node = new MultNode(node, rhs);
             } else if (token instanceof Lexer.Divide) {
-                node = rebuild(this::buildDivide, node, rhs);
+                node = new DivideNode(node, rhs);
             } else {
                 throw new IllegalArgumentException("Could not parse " + token.toString());
             }
         }
         return node;
-    }
-
-    private Node rebuild(final BiFunction<Node, Node, Node> ctor, final Node lhs, final Node rhs) {
-        Node node = ctor.apply(lhs, rhs);
-        return node;
-    }
-
-    private PlusNode buildPlus(Node lhs, Node rhs) {
-        return new PlusNode(lhs, rhs);
-    }
-
-    private MinusNode buildMinus(Node lhs, Node rhs) {
-        return new MinusNode(lhs, rhs);
-    }
-
-    private MultNode buildMult(Node lhs, Node rhs) {
-        return new MultNode(lhs, rhs);
-    }
-
-    private DivideNode buildDivide(Node lhs, Node rhs) {
-        return new DivideNode(lhs, rhs);
     }
 
     private Pair<Integer, Integer> precedence(Lexer.Token token) {
