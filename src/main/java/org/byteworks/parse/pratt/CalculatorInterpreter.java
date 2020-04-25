@@ -1,9 +1,16 @@
 package org.byteworks.parse.pratt;
 
 import java.io.PrintStream;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class CalculatorInterpreter {
+    private final Map<String, Value> variables = new HashMap<>();
+
+    public Value getVariable(final String name) {
+        return variables.get(name);
+    }
 
     public enum Type {
         NUMBER
@@ -67,6 +74,19 @@ public class CalculatorInterpreter {
             }
         } else if (expression instanceof CalculatorParser.BinaryOpNode) {
             CalculatorParser.BinaryOpNode binaryOp = (CalculatorParser.BinaryOpNode) expression;
+            if (binaryOp instanceof CalculatorParser.AssignmentNode) {
+                if (!(binaryOp.getLhs() instanceof CalculatorParser.IdentifierNode)) {
+                    throw new IllegalStateException("The left hand side of an assignment must be a variable in expression " + binaryOp);
+                }
+                if (!(binaryOp.getRhs() instanceof CalculatorParser.ExpressionNode)) {
+                    throw new IllegalStateException("Expected an expression for rhs of " + expression + " but got " + binaryOp.getLhs().getClass().getSimpleName() + " instead");
+                }
+                CalculatorParser.IdentifierNode ident = (CalculatorParser.IdentifierNode) binaryOp.getLhs();
+                CalculatorParser.ExpressionNode rhs = (CalculatorParser.ExpressionNode) binaryOp.getRhs();
+                Value value = evaluateExpression(rhs);
+                variables.put(ident.getChars(), value);
+                return value;
+            }
             if (!(binaryOp.getLhs() instanceof CalculatorParser.ExpressionNode)) {
                 throw new IllegalStateException("Expected an expression for lhs of " + expression + " but got " + binaryOp.getLhs().getClass().getSimpleName() + " instead");
             }
