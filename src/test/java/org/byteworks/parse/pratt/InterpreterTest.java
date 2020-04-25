@@ -54,4 +54,12 @@ public class InterpreterTest {
         ps.flush();
         Assertions.assertEquals("14: NUMBER\n", new String(baos.toByteArray()));
     }
+
+    @Test
+    void interpretsExpressionWithNegativeNumber() {
+        setUp("-3 + 4");
+        testObj.exec(nodes, ps);
+        ps.flush();
+        Assertions.assertEquals("1: NUMBER\n", new String(baos.toByteArray()));
+    }
 }

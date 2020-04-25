@@ -46,17 +46,26 @@ public class Interpreter {
             try {
                 Long longValue = Long.parseLong(literal.getValue());
                 return new Value(longValue, Type.NUMBER);
-            } catch(NumberFormatException e) {
+            } catch (NumberFormatException e) {
                 throw new IllegalStateException("Unable to parse literal " + literal.getValue());
             }
-        }
-        if (expression instanceof Parser.BinaryOpNode) {
+        } else if (expression instanceof Parser.UnaryOpNode) {
+            Parser.UnaryOpNode unaryOp = (Parser.UnaryOpNode) expression;
+            if (!(unaryOp.getExpr() instanceof Parser.ExpressionNode)) {
+                throw new IllegalStateException("Negation expected an expression but got " + unaryOp.getExpr());
+            }
+            Value value = evaluateExpression((Parser.ExpressionNode) unaryOp.getExpr());
+            if (value.getType() != Type.NUMBER) {
+                throw new IllegalStateException("Negation expected a number but got " + value);
+            }
+            return new Value(-((Long)value.getValue()), Type.NUMBER);
+        } else if (expression instanceof Parser.BinaryOpNode) {
             Parser.BinaryOpNode binaryOp = (Parser.BinaryOpNode) expression;
             if (!(binaryOp.getLhs() instanceof Parser.ExpressionNode)) {
-                throw new IllegalStateException("Expected an expression for lhs of " + expression.toString() + " but got " + binaryOp.getLhs().getClass().getSimpleName() + " instead");
+                throw new IllegalStateException("Expected an expression for lhs of " + expression + " but got " + binaryOp.getLhs().getClass().getSimpleName() + " instead");
             }
             if (!(binaryOp.getRhs() instanceof Parser.ExpressionNode)) {
-                throw new IllegalStateException("Expected an expression for rhs of " + expression.toString() + " but got " + binaryOp.getLhs().getClass().getSimpleName() + " instead");
+                throw new IllegalStateException("Expected an expression for rhs of " + expression + " but got " + binaryOp.getLhs().getClass().getSimpleName() + " instead");
             }
             Parser.ExpressionNode lhs = (Parser.ExpressionNode) binaryOp.getLhs();
             Parser.ExpressionNode rhs = (Parser.ExpressionNode) binaryOp.getRhs();
@@ -74,7 +83,7 @@ public class Interpreter {
                 throw new IllegalStateException("Don't know how to evaluate binary operator " + expression.getClass().getSimpleName());
             }
         }
-        throw new IllegalStateException("Don't know how to evaluate expression " + expression.toString());
+        throw new IllegalStateException("Don't know how to evaluate expression " + expression);
     }
 
     private Value binaryPlus(Value left, Value right) {
