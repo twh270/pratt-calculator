@@ -46,4 +46,14 @@ class ParserTest {
         ast.stream().forEach(sb::append);
         Assertions.assertEquals("(+ (* 4 1) (* 2 3))", sb.toString());
     }
+
+    @Test
+    void parseNegativeNumber() {
+        Lexer lexer = new Lexer("-3 + 4");
+        Parser parser = new Parser();
+        List<Parser.Node> ast = parser.parse(lexer);
+        StringBuilder sb = new StringBuilder();
+        ast.stream().forEach(sb::append);
+        Assertions.assertEquals("(+ -(3) 4)", sb.toString());
+    }
 }

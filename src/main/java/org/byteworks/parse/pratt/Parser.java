@@ -41,13 +41,39 @@ public class Parser {
         }
     }
 
+    public static class UnaryOpNode extends ExpressionNode {
+        private final Node expr;
+
+        public UnaryOpNode(final Node expr) {
+            this.expr = expr;
+        }
+
+        public Node getExpr() {
+            return expr;
+        }
+
+        @Override
+        public String toString() {
+            return "-(" + expr.toString() + ")";
+        }
+    }
+
+    public static class NegationNode extends UnaryOpNode {
+
+        public NegationNode(final Node expr) {
+            super(expr);
+        }
+    }
+
     public static class BinaryOpNode extends ExpressionNode {
         private final Node lhs;
         private final Node rhs;
+        private final String op;
 
-        public BinaryOpNode(Node lhs, Node rhs) {
+        public BinaryOpNode(Node lhs, Node rhs, String op) {
             this.lhs = lhs;
             this.rhs = rhs;
+            this.op = op;
         }
 
         public Node getLhs() {
@@ -60,31 +86,31 @@ public class Parser {
 
         @Override
         public String toString() {
-            return "BinaryOp." + this.getClass().getSimpleName() + "(+ " + lhs.toString() + " " + rhs.toString() + ")";
+            return "(" + op + " " + lhs.toString() + " " + rhs.toString() + ")";
         }
     }
 
     public static class PlusNode extends BinaryOpNode {
         public PlusNode(final Node lhs, final Node rhs) {
-            super(lhs, rhs);
+            super(lhs, rhs, "+");
         }
     }
 
     public static class MinusNode extends BinaryOpNode {
         public MinusNode(final Node lhs, final Node rhs) {
-            super(lhs, rhs);
+            super(lhs, rhs, "-");
         }
     }
 
     public static class MultNode extends BinaryOpNode {
         public MultNode(final Node lhs, final Node rhs) {
-            super(lhs, rhs);
+            super(lhs, rhs, "*");
         }
     }
 
     public static class DivideNode extends BinaryOpNode {
         public DivideNode(final Node lhs, final Node rhs) {
-            super(lhs, rhs);
+            super(lhs, rhs, "/");
         }
     }
 
@@ -93,9 +119,10 @@ public class Parser {
     }
 
     /*
-      0   == entry
-      1,2 == +, -
-      3,4 == *, /
+      0     == entry
+      1,2   == +, -
+      3,4   == *, /
+      9,10  == negation
      */
     private Node parse(final Lexer lexer, final int precedence) {
         Node node = null;
@@ -104,6 +131,9 @@ public class Parser {
             return new EmptyNode();
         } else if (token instanceof Lexer.Number) {
             node = new LiteralNode(token.getChars());
+        } else if (token instanceof Lexer.Minus) {
+            Node expr = parse(lexer, 10);
+            node = new NegationNode(expr);
         }
         while (true) {
             token = lexer.peek();
@@ -151,18 +181,13 @@ public class Parser {
 
     private Pair<Integer, Integer> precedence(Lexer.Token token) {
         if (token instanceof Lexer.Plus || token instanceof Lexer.Minus) {
-            return new Pair(1, 2);
+            return new Pair<>(1, 2);
         } else if (token instanceof Lexer.Mult || token instanceof Lexer.Divide) {
-            return new Pair(3, 4);
+            return new Pair<>(3, 4);
         } else if (token instanceof Lexer.Eof) {
-            return new Pair(-1, 0);
+            return new Pair<>(-1, 0);
         }
         throw new IllegalStateException("Bad token " + token.getChars());
     }
 
-    static String toString(List<Node> ast) {
-        StringBuilder sb = new StringBuilder();
-        ast.stream().forEach(sb::append);
-        return sb.toString();
-    }
 }
