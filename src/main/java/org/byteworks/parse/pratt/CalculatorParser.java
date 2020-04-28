@@ -32,12 +32,12 @@ public class CalculatorParser {
     }
 
     static class PrecedencePairs {
-        static final Parser.Pair<Integer,Integer> EOF = new Parser.Pair<>(-1, 0);
+        static final Parser.Pair<Integer,Integer> EOF = new Parser.Pair<>(-1, null);
         static final Parser.Pair<Integer,Integer> EOL = new Parser.Pair<>(-1, 0);
         static final Parser.Pair<Integer,Integer> PARENS = new Parser.Pair<>(-1, 0);
         static final Parser.Pair<Integer,Integer> PLUS_MINUS = new Parser.Pair<>(3, 4);
         static final Parser.Pair<Integer,Integer> MULT_DIV = new Parser.Pair<>(7, 8);
-        static final Parser.Pair<Integer,Integer> SIGNED = new Parser.Pair<>(9, 10);
+        static final Parser.Pair<Integer,Integer> SIGNED = new Parser.Pair<>(null, 10);
         static final Parser.Pair<Integer,Integer> ASSIGNMENT = new Parser.Pair<>(1, 2);
     }
 
