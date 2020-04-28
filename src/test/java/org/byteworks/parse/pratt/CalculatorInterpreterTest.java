@@ -96,4 +96,38 @@ public class CalculatorInterpreterTest {
         Assertions.assertEquals("7: NUMBER\n14: NUMBER\n", new String(baos.toByteArray()));
         Assertions.assertEquals("7: NUMBER", testObj.getVariable("x").toString());
     }
+
+    @Test
+    void interpretsPreIncrementNumber() {
+        setUp("++4");
+        testObj.exec(nodes, ps);
+        ps.flush();
+        Assertions.assertEquals("5: NUMBER\n", new String(baos.toByteArray()));
+    }
+
+    @Test
+    void interpretsPreDecrementNumber() {
+        setUp("--4");
+        testObj.exec(nodes, ps);
+        ps.flush();
+        Assertions.assertEquals("3: NUMBER\n", new String(baos.toByteArray()));
+    }
+
+    @Test
+    void interpretsPreIncrementVariable() {
+        setUp("x = 3 + 4\n++x");
+        testObj.exec(nodes, ps);
+        ps.flush();
+        Assertions.assertEquals("7: NUMBER\n8: NUMBER\n", new String(baos.toByteArray()));
+        Assertions.assertEquals("8: NUMBER", testObj.getVariable("x").toString());
+    }
+
+    @Test
+    void interpretsPreDecrementVariable() {
+        setUp("x = 3 + 4\n--x");
+        testObj.exec(nodes, ps);
+        ps.flush();
+        Assertions.assertEquals("7: NUMBER\n6: NUMBER\n", new String(baos.toByteArray()));
+        Assertions.assertEquals("6: NUMBER", testObj.getVariable("x").toString());
+    }
 }
