@@ -215,7 +215,7 @@ public class CalculatorParser {
         public Parser.Node parse(final Lexer.Token token, final Parser parser, final Lexer lexer) {
             Parser.Node expr = parser.parse(lexer, PrecedencePairs.PARENS.getRight());
             Lexer.Token tok = lexer.next();
-            if (!(tok instanceof Lexer.RParen)) {
+            if (!(tok.getType() == Lexer.TokenType.RPAREN)) {
                 throw new IllegalStateException("Expected a right parenthesis but got " + tok);
             }
             return expr;

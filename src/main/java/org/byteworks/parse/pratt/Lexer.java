@@ -42,13 +42,13 @@ public class Lexer {
 
         final static Eof EOF = new Eof();
         final static Eol EOL = new Eol();
-        final static Plus PLUS = new Plus();
-        final static Minus MINUS = new Minus();
-        final static Mult MULT = new Mult();
-        final static Divide DIVIDE = new Divide();
-        final static LParen LPAREN = new LParen();
-        final static RParen RPAREN = new RParen();
-        final static Assignment ASSIGNMENT = new Assignment();
+        final static Operator PLUS = new Operator("+", TokenType.PLUS);
+        final static Operator MINUS = new Operator("-", TokenType.MINUS);
+        final static Operator MULT = new Operator("*", TokenType.MULTIPLY);
+        final static Operator DIVIDE = new Operator("/", TokenType.DIVIDE);
+        final static Operator LPAREN = new Operator("(", TokenType.LPAREN);
+        final static Operator RPAREN = new Operator(")", TokenType.RPAREN);
+        final static Operator ASSIGNMENT = new Operator("=", TokenType.ASSIGNMENT);
 
         @Override
         public String toString() {
@@ -64,6 +64,10 @@ public class Lexer {
         Identifier(String chars) { super(chars, TokenType.IDENTIFIER); }
     }
 
+    public static class Operator extends Token {
+        Operator(String chars, TokenType tokenType) { super(chars, tokenType); }
+    }
+
     public static class Eof extends Token {
         Eof() {
             super("", TokenType.EOF);
@@ -76,34 +80,6 @@ public class Lexer {
 
     public static class Unknown extends Token {
         Unknown(String chars) { super(chars, TokenType.UNKNOWN); }
-    }
-
-    public static class Plus extends Token {
-        Plus() { super("+"); }
-    }
-
-    public static class Minus extends Token {
-        public Minus() { super("-"); }
-    }
-
-    public static class Mult extends Token {
-        Mult() { super("*"); }
-    }
-
-    public static class Divide extends Token {
-        Divide() { super("/"); }
-    }
-
-    public static class LParen extends Token {
-        LParen() { super("("); }
-    }
-
-    static class RParen extends Token {
-        RParen() { super(")"); }
-    }
-
-    static class Assignment extends Token {
-        Assignment() { super("="); }
     }
 
     private boolean isIdentifierCharacter(char ch) {
