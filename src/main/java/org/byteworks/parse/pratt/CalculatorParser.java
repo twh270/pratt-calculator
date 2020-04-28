@@ -39,6 +39,8 @@ public class CalculatorParser {
         static final Parser.Pair<Integer,Integer> MULT_DIV = new Parser.Pair<>(7, 8);
         static final Parser.Pair<Integer,Integer> SIGNED = new Parser.Pair<>(null, 10);
         static final Parser.Pair<Integer,Integer> ASSIGNMENT = new Parser.Pair<>(1, 2);
+        static final Parser.Pair<Integer,Integer> PRE_INCREMENT = new Parser.Pair<>(1, 2);
+        static final Parser.Pair<Integer,Integer> PRE_DECREMENT = new Parser.Pair<>(1, 2);
     }
 
     public static class EmptyNode extends Parser.Node {
@@ -92,6 +94,18 @@ public class CalculatorParser {
     public static class PositiveSigned extends UnaryOpNode {
         public PositiveSigned(final Parser.Node expr) {
             super(expr, "+");
+        }
+    }
+
+    public static class PreIncrement extends UnaryOpNode {
+        public PreIncrement(final Parser.Node expr) {
+            super(expr, "++");
+        }
+    }
+
+    public static class PreDecrement extends UnaryOpNode {
+        public PreDecrement(final Parser.Node expr) {
+            super(expr, "--");
         }
     }
 
@@ -195,6 +209,11 @@ public class CalculatorParser {
 
         @Override
         public Parser.Node parse(final Lexer.Token token, final Parser parser, Lexer lexer) {
+            if (lexer.peek().getType() == Lexer.TokenType.MINUS) {
+                lexer.next();
+                Parser.Node expr = parser.parse(lexer, PrecedencePairs.PRE_DECREMENT.getRight());
+                return new PreDecrement(expr);
+            }
             Parser.Node expr = parser.parse(lexer, PrecedencePairs.SIGNED.getRight());
             return new NegativeSigned(expr);
         }
@@ -204,6 +223,11 @@ public class CalculatorParser {
 
         @Override
         public Parser.Node parse(final Lexer.Token token, final Parser parser, final Lexer lexer) {
+            if (lexer.peek().getType() == Lexer.TokenType.PLUS) {
+                lexer.next();
+                Parser.Node expr = parser.parse(lexer, PrecedencePairs.PRE_INCREMENT.getRight());
+                return new PreIncrement(expr);
+            }
             Parser.Node expr = parser.parse(lexer, PrecedencePairs.SIGNED.getRight());
             return new PositiveSigned(expr);
         }

@@ -65,7 +65,7 @@ public class Parser {
         if (precedencePair == null) {
             throw new IllegalStateException("Got no precedence pair for parse infix, token = " + token);
         }
-        return precedencePair.left >= precedence;
+        return precedencePair.getLeft() >= precedence;
     }
 
     interface InfixParser {
