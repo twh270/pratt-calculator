@@ -10,13 +10,14 @@ public class Lexer {
     public Lexer(String input) { this.input = input; }
 
     public enum TokenType {
-        UNKNOWN, PLUS, MINUS, MULTIPLY, DIVIDE, LPAREN, RPAREN, EOF, EOL, NUMBER, IDENTIFIER,
+        UNKNOWN, PLUS, PLUSPLUS, MINUS, MINUSMINUS, MULTIPLY, DIVIDE, LPAREN, RPAREN, EOF, EOL, NUMBER, IDENTIFIER,
         ASSIGNMENT;
 
         private static Map<String, TokenType> charsToToken = new HashMap<>();
         static {
             charsToToken.put("+", PLUS);
-            charsToToken.put("-", MINUS);
+            charsToToken.put("++", PLUSPLUS);
+            charsToToken.put("--", MINUSMINUS);
             charsToToken.put("*", MULTIPLY);
             charsToToken.put("/", DIVIDE);
             charsToToken.put("(", LPAREN);
@@ -35,7 +36,6 @@ public class Lexer {
     public static class Token {
         private final String chars;
         private final TokenType type;
-        public Token(String chars) { this.chars = chars; this.type = TokenType.from(chars); }
         public Token(String chars, TokenType type) { this.chars = chars; this.type = type; }
         public String getChars() { return chars; }
         public TokenType getType() { return type; }
@@ -43,7 +43,9 @@ public class Lexer {
         final static Eof EOF = new Eof();
         final static Eol EOL = new Eol();
         final static Operator PLUS = new Operator("+", TokenType.PLUS);
+        final static Operator PLUSPLUS = new Operator("++", TokenType.PLUSPLUS);
         final static Operator MINUS = new Operator("-", TokenType.MINUS);
+        final static Operator MINUSMINUS = new Operator("--", TokenType.MINUSMINUS);
         final static Operator MULT = new Operator("*", TokenType.MULTIPLY);
         final static Operator DIVIDE = new Operator("/", TokenType.DIVIDE);
         final static Operator LPAREN = new Operator("(", TokenType.LPAREN);
@@ -116,8 +118,16 @@ public class Lexer {
             return new Identifier(sb.toString());
         }
         else if (ch == '+') {
+            if (peek_ch() == '+') {
+                read_ch();
+                return Token.PLUSPLUS;
+            }
             return Token.PLUS;
         } else if (ch == '-') {
+            if (peek_ch() == '-') {
+                read_ch();
+                return Token.MINUSMINUS;
+            }
             return Token.MINUS;
         } else if (ch == '*') {
             return Token.MULT;

@@ -130,4 +130,36 @@ public class CalculatorInterpreterTest {
         Assertions.assertEquals("7: NUMBER\n6: NUMBER\n", new String(baos.toByteArray()));
         Assertions.assertEquals("6: NUMBER", testObj.getVariable("x").toString());
     }
+
+    @Test
+    void interpretsPostIncrementNumber() {
+        setUp("4++");
+        testObj.exec(nodes, ps);
+        ps.flush();
+        Assertions.assertEquals("5: NUMBER\n", new String(baos.toByteArray()));
+    }
+
+    @Test
+    void interpretsPostIncrementVariable() {
+        setUp("x = 3 + 4\nx++");
+        testObj.exec(nodes, ps);
+        ps.flush();
+        Assertions.assertEquals("7: NUMBER\n7: NUMBER\n", new String(baos.toByteArray()));
+        Assertions.assertEquals("8: NUMBER", testObj.getVariable("x").toString());
+    }
+    @Test
+    void interpretsPostDecrementNumber() {
+        setUp("4--");
+        testObj.exec(nodes, ps);
+        ps.flush();
+        Assertions.assertEquals("3: NUMBER\n", new String(baos.toByteArray()));
+    }
+    @Test
+    void interpretsPostDecrementVariable() {
+        setUp("x = 3 + 4\nx--");
+        testObj.exec(nodes, ps);
+        ps.flush();
+        Assertions.assertEquals("7: NUMBER\n7: NUMBER\n", new String(baos.toByteArray()));
+        Assertions.assertEquals("6: NUMBER", testObj.getVariable("x").toString());
+    }
 }

@@ -136,4 +136,24 @@ class CalculatorParserTest {
         ast.stream().forEach(sb::append);
         Assertions.assertEquals("--(4)", sb.toString());
     }
+
+    @Test
+    void postIncrement() {
+        Lexer lexer = new Lexer("4++");
+        Parser parser = CalculatorParser.createParser();
+        List<Parser.Node> ast = parser.parse(lexer);
+        StringBuilder sb = new StringBuilder();
+        ast.stream().forEach(sb::append);
+        Assertions.assertEquals("++(4)", sb.toString());
+    }
+
+    @Test
+    void postDecrement() {
+        Lexer lexer = new Lexer("4--");
+        Parser parser = CalculatorParser.createParser();
+        List<Parser.Node> ast = parser.parse(lexer);
+        StringBuilder sb = new StringBuilder();
+        ast.stream().forEach(sb::append);
+        Assertions.assertEquals("--(4)", sb.toString());
+    }
 }

@@ -127,6 +127,24 @@ public class CalculatorInterpreter {
                 return updatedValue;
             }
             return new Value((Long) value.getValue() - 1, Type.NUMBER);
+        } else if (unaryOp instanceof CalculatorParser.PostIncrement) {
+            CalculatorParser.PostIncrement postIncrement = (CalculatorParser.PostIncrement) unaryOp;
+            if (postIncrement.getExpr() instanceof CalculatorParser.IdentifierNode) {
+                String variableName = ((CalculatorParser.IdentifierNode) postIncrement.getExpr()).getChars();
+                Value variableValue = variables.get(variableName);
+                variables.put(variableName, new Value((Long) variableValue.getValue() + 1, Type.NUMBER));
+                return variableValue;
+            }
+            return new Value((Long) value.getValue() + 1, Type.NUMBER);
+        } else if (unaryOp instanceof CalculatorParser.PostDecrement) {
+            CalculatorParser.PostDecrement postDecrement = (CalculatorParser.PostDecrement) unaryOp;
+            if (postDecrement.getExpr() instanceof CalculatorParser.IdentifierNode) {
+                String variableName = ((CalculatorParser.IdentifierNode) postDecrement.getExpr()).getChars();
+                Value variableValue = variables.get(variableName);
+                variables.put(variableName, new Value((Long) variableValue.getValue() - 1, Type.NUMBER));
+                return variableValue;
+            }
+            return new Value((Long) value.getValue() - 1, Type.NUMBER);
         } else {
             throw new IllegalStateException("Unknown unary operator " + unaryOp + " in expression " + expression);
         }

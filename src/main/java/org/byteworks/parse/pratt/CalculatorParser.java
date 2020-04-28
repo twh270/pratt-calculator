@@ -14,6 +14,8 @@ public class CalculatorParser {
         infixParsers.put(Lexer.TokenType.MULTIPLY, new MultInfixParser());
         infixParsers.put(Lexer.TokenType.DIVIDE, new DivideInfixParser());
         infixParsers.put(Lexer.TokenType.ASSIGNMENT, new AssignmentInfixParser());
+        infixParsers.put(Lexer.TokenType.PLUSPLUS, new PlusPlusInfixParser());
+        infixParsers.put(Lexer.TokenType.MINUSMINUS, new MinusMinusInfixParser());
         prefixParsers.put(Lexer.TokenType.EOF, new EofPrefixParser());
         prefixParsers.put(Lexer.TokenType.NUMBER, new NumberPrefixParser());
         prefixParsers.put(Lexer.TokenType.MINUS, new MinusPrefixParser());
@@ -21,6 +23,8 @@ public class CalculatorParser {
         prefixParsers.put(Lexer.TokenType.LPAREN, new LParenPrefixParser());
         prefixParsers.put(Lexer.TokenType.IDENTIFIER, new IdentifierPrefixParser());
         prefixParsers.put(Lexer.TokenType.EOL, new EndOfLinePrefixParser());
+        prefixParsers.put(Lexer.TokenType.PLUSPLUS, new PlusPlusPrefixParser());
+        prefixParsers.put(Lexer.TokenType.MINUSMINUS, new MinusMinusPrefixParser());
         tokenPrecedence.put(Lexer.TokenType.PLUS, PrecedencePairs.PLUS_MINUS);
         tokenPrecedence.put(Lexer.TokenType.MINUS, PrecedencePairs.PLUS_MINUS);
         tokenPrecedence.put(Lexer.TokenType.MULTIPLY, PrecedencePairs.MULT_DIV);
@@ -29,6 +33,8 @@ public class CalculatorParser {
         tokenPrecedence.put(Lexer.TokenType.EOL, PrecedencePairs.EOL);
         tokenPrecedence.put(Lexer.TokenType.RPAREN, PrecedencePairs.PARENS);
         tokenPrecedence.put(Lexer.TokenType.ASSIGNMENT, PrecedencePairs.ASSIGNMENT);
+        tokenPrecedence.put(Lexer.TokenType.PLUSPLUS, PrecedencePairs.PRE_POST_INCREMENT);
+        tokenPrecedence.put(Lexer.TokenType.MINUSMINUS, PrecedencePairs.PRE_POST_DECREMENT);
     }
 
     static class PrecedencePairs {
@@ -39,8 +45,10 @@ public class CalculatorParser {
         static final Parser.Pair<Integer,Integer> MULT_DIV = new Parser.Pair<>(7, 8);
         static final Parser.Pair<Integer,Integer> SIGNED = new Parser.Pair<>(null, 10);
         static final Parser.Pair<Integer,Integer> ASSIGNMENT = new Parser.Pair<>(1, 2);
-        static final Parser.Pair<Integer,Integer> PRE_INCREMENT = new Parser.Pair<>(1, 2);
-        static final Parser.Pair<Integer,Integer> PRE_DECREMENT = new Parser.Pair<>(1, 2);
+        static final Parser.Pair<Integer,Integer> PRE_INCREMENT = new Parser.Pair<>(null, 2);
+        static final Parser.Pair<Integer,Integer> PRE_DECREMENT = new Parser.Pair<>(null, 2);
+        static final Parser.Pair<Integer,Integer> PRE_POST_INCREMENT = new Parser.Pair<>(11, null);
+        static final Parser.Pair<Integer,Integer> PRE_POST_DECREMENT = new Parser.Pair<>(11, null);
     }
 
     public static class EmptyNode extends Parser.Node {
@@ -105,6 +113,18 @@ public class CalculatorParser {
 
     public static class PreDecrement extends UnaryOpNode {
         public PreDecrement(final Parser.Node expr) {
+            super(expr, "--");
+        }
+    }
+
+    public static class PostIncrement extends UnaryOpNode {
+        public PostIncrement(final Parser.Node expr) {
+            super(expr, "++");
+        }
+    }
+
+    public static class PostDecrement extends UnaryOpNode {
+        public PostDecrement(final Parser.Node expr) {
             super(expr, "--");
         }
     }
@@ -209,13 +229,17 @@ public class CalculatorParser {
 
         @Override
         public Parser.Node parse(final Lexer.Token token, final Parser parser, Lexer lexer) {
-            if (lexer.peek().getType() == Lexer.TokenType.MINUS) {
-                lexer.next();
-                Parser.Node expr = parser.parse(lexer, PrecedencePairs.PRE_DECREMENT.getRight());
-                return new PreDecrement(expr);
-            }
             Parser.Node expr = parser.parse(lexer, PrecedencePairs.SIGNED.getRight());
             return new NegativeSigned(expr);
+        }
+    }
+
+    static class MinusMinusPrefixParser implements Parser.PrefixParser {
+
+        @Override
+        public Parser.Node parse(final Lexer.Token token, final Parser parser, final Lexer lexer) {
+            Parser.Node expr = parser.parse(lexer, PrecedencePairs.PRE_DECREMENT.getRight());
+            return new PreDecrement(expr);
         }
     }
 
@@ -223,13 +247,17 @@ public class CalculatorParser {
 
         @Override
         public Parser.Node parse(final Lexer.Token token, final Parser parser, final Lexer lexer) {
-            if (lexer.peek().getType() == Lexer.TokenType.PLUS) {
-                lexer.next();
-                Parser.Node expr = parser.parse(lexer, PrecedencePairs.PRE_INCREMENT.getRight());
-                return new PreIncrement(expr);
-            }
             Parser.Node expr = parser.parse(lexer, PrecedencePairs.SIGNED.getRight());
             return new PositiveSigned(expr);
+        }
+    }
+
+    static class PlusPlusPrefixParser implements Parser.PrefixParser {
+
+        @Override
+        public Parser.Node parse(final Lexer.Token token, final Parser parser, final Lexer lexer) {
+            Parser.Node expr = parser.parse(lexer, PrecedencePairs.PRE_INCREMENT.getRight());
+            return new PreIncrement(expr);
         }
     }
 
@@ -263,12 +291,28 @@ public class CalculatorParser {
         }
     }
 
+    static class PlusPlusInfixParser implements Parser.InfixParser {
+
+        @Override
+        public Parser.Node parse(final Parser.Node node, final Lexer.Token token, final Parser parser, final Lexer lexer) {
+            return new PostIncrement(node);
+        }
+    }
+
     static class MinusInfixParser implements Parser.InfixParser {
 
         @Override
         public Parser.Node parse(final Parser.Node node, final Lexer.Token token, final Parser parser, final Lexer lexer) {
             Parser.Node rhs = parser.parse(lexer, PrecedencePairs.PLUS_MINUS.getRight());
             return new MinusNode(node, rhs);
+        }
+    }
+
+    static class MinusMinusInfixParser implements Parser.InfixParser {
+
+        @Override
+        public Parser.Node parse(final Parser.Node node, final Lexer.Token token, final Parser parser, final Lexer lexer) {
+            return new PostDecrement(node);
         }
     }
 
