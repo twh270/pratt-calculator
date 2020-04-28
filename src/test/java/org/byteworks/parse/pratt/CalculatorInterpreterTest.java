@@ -1,13 +1,14 @@
 package org.byteworks.parse.pratt;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.List;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class CalculatorInterpreterTest {
+class CalculatorInterpreterTest {
 
     private List<Parser.Node> nodes;
     private PrintStream ps;
@@ -23,143 +24,133 @@ public class CalculatorInterpreterTest {
         testObj = new CalculatorInterpreter();
     }
 
-    @Test
-    void interpretsAddition() {
-        setUp("1 + 2");
+    private String execute(String input) {
+        setUp(input);
         testObj.exec(nodes, ps);
         ps.flush();
-        Assertions.assertEquals("3: NUMBER\n", new String(baos.toByteArray()));
+        return new String(baos.toByteArray());
+    }
+
+    @Test
+    void interpretsAddition() {
+        String result = execute("1 + 2");
+        assertEquals("3: NUMBER\n", result);
     }
 
     @Test
     void interpretsSimpleExpression() {
-        setUp("1 + 2 * 3");
-        testObj.exec(nodes, ps);
-        ps.flush();
-        Assertions.assertEquals("7: NUMBER\n", new String(baos.toByteArray()));
+        String result = execute("1 + 2 * 3");
+        assertEquals("7: NUMBER\n", result);
     }
 
     @Test
     void interpretsComplexExpression() {
-        setUp("4 * 1 + 2 * 3");
-        testObj.exec(nodes, ps);
-        ps.flush();
-        Assertions.assertEquals("10: NUMBER\n", new String(baos.toByteArray()));
+        String result = execute("4 * 1 + 2 * 3");
+        assertEquals("10: NUMBER\n", result);
     }
 
     @Test
     void interpretsComplexExpressionAllOperators() {
-        setUp("3 * 4 + 6 - 8 / 2");
-        testObj.exec(nodes, ps);
-        ps.flush();
-        Assertions.assertEquals("14: NUMBER\n", new String(baos.toByteArray()));
+        String result = execute("3 * 4 + 6 - 8 / 2");
+        assertEquals("14: NUMBER\n", result);
     }
 
     @Test
     void interpretsExpressionWithNegativeSignedNumber() {
-        setUp("-3 + 4");
-        testObj.exec(nodes, ps);
-        ps.flush();
-        Assertions.assertEquals("1: NUMBER\n", new String(baos.toByteArray()));
+        String result = execute("-3 + 4");
+        assertEquals("1: NUMBER\n", result);
     }
 
     @Test
     void interpretsExpressionWithPositiveSignedNumber() {
-        setUp("3 + +4");
-        testObj.exec(nodes, ps);
-        ps.flush();
-        Assertions.assertEquals("7: NUMBER\n", new String(baos.toByteArray()));
+        String result = execute("3 + +4");
+        assertEquals("7: NUMBER\n", result);
     }
 
     @Test
     void interpretsParenthesized() {
-        setUp("(3 + 4) * 2");
-        testObj.exec(nodes, ps);
-        ps.flush();
-        Assertions.assertEquals("14: NUMBER\n", new String(baos.toByteArray()));
+        String result = execute("(3 + 4) * 2");
+        assertEquals("14: NUMBER\n", result);
     }
 
     @Test
     void interpretsVariableAssignment() {
-        setUp("x = 3 + 4");
-        testObj.exec(nodes, ps);
-        ps.flush();
-        Assertions.assertEquals("7: NUMBER\n", new String(baos.toByteArray()));
-        Assertions.assertEquals("7: NUMBER", testObj.getVariable("x").toString());
+        String result = execute("x = 3 + 4");
+        assertEquals("7: NUMBER\n", result);
+        assertEquals("7: NUMBER", testObj.getVariable("x").toString());
     }
 
     @Test
     void interpretsVariableAssignmentAndEvaluation() {
-        setUp("x = 3 + 4\nx * 2");
-        testObj.exec(nodes, ps);
-        ps.flush();
-        Assertions.assertEquals("7: NUMBER\n14: NUMBER\n", new String(baos.toByteArray()));
-        Assertions.assertEquals("7: NUMBER", testObj.getVariable("x").toString());
+        String result = execute("x = 3 + 4\nx * 2");
+        assertEquals("7: NUMBER\n14: NUMBER\n", result);
+        assertEquals("7: NUMBER", testObj.getVariable("x").toString());
     }
 
     @Test
     void interpretsPreIncrementNumber() {
-        setUp("++4");
-        testObj.exec(nodes, ps);
-        ps.flush();
-        Assertions.assertEquals("5: NUMBER\n", new String(baos.toByteArray()));
+        String result = execute("++4");
+        assertEquals("5: NUMBER\n", result);
     }
 
     @Test
     void interpretsPreDecrementNumber() {
-        setUp("--4");
-        testObj.exec(nodes, ps);
-        ps.flush();
-        Assertions.assertEquals("3: NUMBER\n", new String(baos.toByteArray()));
+        String result = execute("--4");
+        assertEquals("3: NUMBER\n", result);
     }
 
     @Test
     void interpretsPreIncrementVariable() {
-        setUp("x = 3 + 4\n++x");
-        testObj.exec(nodes, ps);
-        ps.flush();
-        Assertions.assertEquals("7: NUMBER\n8: NUMBER\n", new String(baos.toByteArray()));
-        Assertions.assertEquals("8: NUMBER", testObj.getVariable("x").toString());
+        String result = execute("x = 3 + 4\n++x");
+        assertEquals("7: NUMBER\n8: NUMBER\n", result);
+        assertEquals("8: NUMBER", testObj.getVariable("x").toString());
     }
 
     @Test
     void interpretsPreDecrementVariable() {
-        setUp("x = 3 + 4\n--x");
-        testObj.exec(nodes, ps);
-        ps.flush();
-        Assertions.assertEquals("7: NUMBER\n6: NUMBER\n", new String(baos.toByteArray()));
-        Assertions.assertEquals("6: NUMBER", testObj.getVariable("x").toString());
+        String result = execute("x = 3 + 4\n--x");
+        assertEquals("7: NUMBER\n6: NUMBER\n", result);
+        assertEquals("6: NUMBER", testObj.getVariable("x").toString());
     }
 
     @Test
     void interpretsPostIncrementNumber() {
-        setUp("4++");
-        testObj.exec(nodes, ps);
-        ps.flush();
-        Assertions.assertEquals("5: NUMBER\n", new String(baos.toByteArray()));
+        String result = execute("4++");
+        assertEquals("5: NUMBER\n", result);
     }
 
     @Test
     void interpretsPostIncrementVariable() {
-        setUp("x = 3 + 4\nx++");
-        testObj.exec(nodes, ps);
-        ps.flush();
-        Assertions.assertEquals("7: NUMBER\n7: NUMBER\n", new String(baos.toByteArray()));
-        Assertions.assertEquals("8: NUMBER", testObj.getVariable("x").toString());
+        String result = execute("x = 3 + 4\nx++");
+        assertEquals("7: NUMBER\n7: NUMBER\n", result);
+        assertEquals("8: NUMBER", testObj.getVariable("x").toString());
     }
+
     @Test
     void interpretsPostDecrementNumber() {
-        setUp("4--");
-        testObj.exec(nodes, ps);
-        ps.flush();
-        Assertions.assertEquals("3: NUMBER\n", new String(baos.toByteArray()));
+        String result = execute("4--");
+        assertEquals("3: NUMBER\n", result);
     }
+
     @Test
     void interpretsPostDecrementVariable() {
-        setUp("x = 3 + 4\nx--");
-        testObj.exec(nodes, ps);
-        ps.flush();
-        Assertions.assertEquals("7: NUMBER\n7: NUMBER\n", new String(baos.toByteArray()));
-        Assertions.assertEquals("6: NUMBER", testObj.getVariable("x").toString());
+        String result = execute("x = 3 + 4\nx--");
+        assertEquals("7: NUMBER\n7: NUMBER\n", result);
+        assertEquals("6: NUMBER", testObj.getVariable("x").toString());
     }
+
+    @Test
+    void interpretsPostIncrementPrecedence() {
+        String result = execute("x = 3\n2+++x");
+        assertEquals("3: NUMBER\n6: NUMBER\n", result);
+        assertEquals("3: NUMBER", testObj.getVariable("x").toString());
+    }
+
+    @Test
+    void interpretsPostDecrementPrecedence() {
+        String result = execute("x = 3\nx---2");
+        assertEquals("3: NUMBER\n1: NUMBER\n", result);
+        assertEquals("2: NUMBER", testObj.getVariable("x").toString());
+    }
+
 }

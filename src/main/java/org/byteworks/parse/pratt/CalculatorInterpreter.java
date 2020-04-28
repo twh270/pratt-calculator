@@ -4,16 +4,91 @@ import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Stack;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class CalculatorInterpreter {
-    private final Map<String, Value> variables = new HashMap<>();
+    private final Map<String, Value> heap = new HashMap<>();
+    private final Map<FunctionSignature, FunctionDefinition> functions = new HashMap<>();
+    private final Stack<Value> stack = new Stack<>();
+
+    private final List<Type> twoNumeric = List.of(Type.NUMBER, Type.NUMBER);
+    private final FunctionDefinition numericAddition = new FunctionDefinition("add", twoNumeric, Type.NUMBER, (FunctionImplementation<Stack<Value>, Value>) stack -> {
+        Value left = stack.pop();
+        Value right = stack.pop();
+        checkOperandType(left, Type.NUMBER, "binary plus", "right");
+        checkOperandType(right, Type.NUMBER, "binary plus", "right");
+        Long leftValue = (Long) left.getValue();
+        Long rightValue = (Long) right.getValue();
+        return new Value(leftValue + rightValue, Type.NUMBER);
+    });
+
+    public CalculatorInterpreter() {
+        functions.put(numericAddition.getSignature(), numericAddition);
+    }
 
     public Value getVariable(final String name) {
-        return variables.get(name);
+        return heap.get(name);
     }
 
     public enum Type {
         NUMBER
+    }
+
+    interface FunctionImplementation<T extends Stack<Value>, U extends Value> extends Function<T, U> {
+    }
+
+    class FunctionSignature {
+        private final String name;
+        private final List<Type> parameterTypes;
+        private final Type returnType;
+
+        FunctionSignature(final String name, final List<Type> parameterTypes, final Type returnType) {
+            this.name = name;
+            this.parameterTypes = parameterTypes;
+            this.returnType = returnType;
+        }
+
+        @Override
+        public String toString() {
+            return name + "(" + parameterTypes.stream().map(Enum::toString).collect(Collectors.joining(",")) + ") -> " + returnType.toString();
+        }
+
+        @Override
+        public boolean equals(final Object obj) {
+            if (obj instanceof FunctionSignature) {
+                return ((FunctionSignature)obj).toString().equals(this.toString());
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return toString().hashCode();
+        }
+    }
+
+    class FunctionDefinition {
+        private final FunctionSignature signature;
+        private final FunctionImplementation<Stack<Value>, Value> impl;
+
+        FunctionDefinition(final String name, final List<Type> parameterTypes, final Type returnType, final FunctionImplementation impl) {
+            this.signature = new FunctionSignature(name, parameterTypes, returnType);
+            this.impl = impl;
+        }
+
+        Value execute(Stack stack) {
+            return impl.apply(stack);
+        }
+
+        public FunctionSignature getSignature() {
+            return signature;
+        }
+
+        public FunctionImplementation<Stack<Value>, Value> getImpl() {
+            return impl;
+        }
     }
 
     public static class Value {
@@ -76,13 +151,18 @@ public class CalculatorInterpreter {
             }
             CalculatorParser.IdentifierNode ident = (CalculatorParser.IdentifierNode) binaryOp.getLhs();
             Value value = evaluateExpression(rhs);
-            variables.put(ident.getChars(), value);
+            heap.put(ident.getChars(), value);
             return value;
         }
         Value left = evaluateExpression(lhs);
         Value right = evaluateExpression(rhs);
         if (binaryOp instanceof CalculatorParser.PlusNode) {
-            return binaryPlus(left, right);
+            FunctionSignature signature = new FunctionSignature("add", twoNumeric, Type.NUMBER);
+            FunctionDefinition fn = functions.get(signature);
+            stack.push(right);
+            stack.push(left);
+            return fn.execute(stack);
+//            return binaryPlus(left, right);
         } else if (binaryOp instanceof CalculatorParser.MinusNode) {
             return binaryMinus(left, right);
         } else if (binaryOp instanceof CalculatorParser.MultNode) {
@@ -111,9 +191,9 @@ public class CalculatorInterpreter {
             CalculatorParser.PreIncrement preIncrement = (CalculatorParser.PreIncrement) unaryOp;
             if (preIncrement.getExpr() instanceof CalculatorParser.IdentifierNode) {
                 String variableName = ((CalculatorParser.IdentifierNode) preIncrement.getExpr()).getChars();
-                Value variableValue = variables.get(variableName);
+                Value variableValue = heap.get(variableName);
                 Value updatedValue = new Value((Long) variableValue.getValue() + 1, Type.NUMBER);
-                variables.put(variableName, updatedValue);
+                heap.put(variableName, updatedValue);
                 return updatedValue;
             }
             return new Value((Long) value.getValue() + 1, Type.NUMBER);
@@ -121,9 +201,9 @@ public class CalculatorInterpreter {
             CalculatorParser.PreDecrement preDecrement = (CalculatorParser.PreDecrement) unaryOp;
             if (preDecrement.getExpr() instanceof CalculatorParser.IdentifierNode) {
                 String variableName = ((CalculatorParser.IdentifierNode) preDecrement.getExpr()).getChars();
-                Value variableValue = variables.get(variableName);
+                Value variableValue = heap.get(variableName);
                 Value updatedValue = new Value((Long) variableValue.getValue() - 1, Type.NUMBER);
-                variables.put(variableName, updatedValue);
+                heap.put(variableName, updatedValue);
                 return updatedValue;
             }
             return new Value((Long) value.getValue() - 1, Type.NUMBER);
@@ -131,8 +211,8 @@ public class CalculatorInterpreter {
             CalculatorParser.PostIncrement postIncrement = (CalculatorParser.PostIncrement) unaryOp;
             if (postIncrement.getExpr() instanceof CalculatorParser.IdentifierNode) {
                 String variableName = ((CalculatorParser.IdentifierNode) postIncrement.getExpr()).getChars();
-                Value variableValue = variables.get(variableName);
-                variables.put(variableName, new Value((Long) variableValue.getValue() + 1, Type.NUMBER));
+                Value variableValue = heap.get(variableName);
+                heap.put(variableName, new Value((Long) variableValue.getValue() + 1, Type.NUMBER));
                 return variableValue;
             }
             return new Value((Long) value.getValue() + 1, Type.NUMBER);
@@ -140,8 +220,8 @@ public class CalculatorInterpreter {
             CalculatorParser.PostDecrement postDecrement = (CalculatorParser.PostDecrement) unaryOp;
             if (postDecrement.getExpr() instanceof CalculatorParser.IdentifierNode) {
                 String variableName = ((CalculatorParser.IdentifierNode) postDecrement.getExpr()).getChars();
-                Value variableValue = variables.get(variableName);
-                variables.put(variableName, new Value((Long) variableValue.getValue() - 1, Type.NUMBER));
+                Value variableValue = heap.get(variableName);
+                heap.put(variableName, new Value((Long) variableValue.getValue() - 1, Type.NUMBER));
                 return variableValue;
             }
             return new Value((Long) value.getValue() - 1, Type.NUMBER);
@@ -153,10 +233,10 @@ public class CalculatorInterpreter {
     private Value identifierExpression(final CalculatorParser.IdentifierNode expression) {
         CalculatorParser.IdentifierNode ident = expression;
         String identName = ident.getChars();
-        if (!variables.containsKey(identName)) {
+        if (!heap.containsKey(identName)) {
             throw new IllegalStateException("Could not resolve variable " + identName);
         }
-        return variables.get(identName);
+        return heap.get(identName);
     }
 
     private Value literalExpression(final CalculatorParser.ExpressionNode expression) {
