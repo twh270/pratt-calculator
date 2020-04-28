@@ -49,91 +49,106 @@ public class CalculatorInterpreter {
 
     private Value evaluateExpression(final CalculatorParser.ExpressionNode expression) {
         if (expression instanceof CalculatorParser.LiteralNode) {
-            CalculatorParser.LiteralNode literal = (CalculatorParser.LiteralNode) expression;
-            try {
-                Long longValue = Long.parseLong(literal.getValue());
-                return new Value(longValue, Type.NUMBER);
-            } catch (NumberFormatException e) {
-                throw new IllegalStateException("Unable to parse literal " + literal.getValue() + " in expression " + expression);
-            }
+            return literalExpression(expression);
         } else if (expression instanceof CalculatorParser.IdentifierNode) {
-            CalculatorParser.IdentifierNode ident = (CalculatorParser.IdentifierNode) expression;
-            String identName = ident.getChars();
-            if (!variables.containsKey(identName)) {
-                throw new IllegalStateException("Could not resolve variable " + identName);
-            }
-            Value value = variables.get(identName);
-            return value;
+            return identifierExpression((CalculatorParser.IdentifierNode) expression);
         } else if (expression instanceof CalculatorParser.UnaryOpNode) {
-            CalculatorParser.UnaryOpNode unaryOp = (CalculatorParser.UnaryOpNode) expression;
-            if (!(unaryOp.getExpr() instanceof CalculatorParser.ExpressionNode)) {
-                throw new IllegalStateException("Unary operator expected an expression but got " + unaryOp.getExpr() + " in expression " + expression);
-            }
-            Value value = evaluateExpression((CalculatorParser.ExpressionNode) unaryOp.getExpr());
-            if (value.getType() != Type.NUMBER) {
-                throw new IllegalStateException("Unary operator expected a number but got " + value + " in expression " + expression);
-            }
-            if (unaryOp instanceof CalculatorParser.NegativeSigned) {
-                return new Value(-((Long) value.getValue()), Type.NUMBER);
-            } else if (unaryOp instanceof CalculatorParser.PositiveSigned) {
-                return new Value(value.getValue(), Type.NUMBER);
-            } else if (unaryOp instanceof CalculatorParser.PreIncrement) {
-                CalculatorParser.PreIncrement preIncrement = (CalculatorParser.PreIncrement) unaryOp;
-                if (preIncrement.getExpr() instanceof CalculatorParser.IdentifierNode) {
-                    String variableName = ((CalculatorParser.IdentifierNode) preIncrement.getExpr()).getChars();
-                    Value variableValue = variables.get(variableName);
-                    Value updatedValue = new Value((Long) variableValue.getValue() + 1, Type.NUMBER);
-                    variables.put(variableName, updatedValue);
-                    return updatedValue;
-                }
-                return new Value((Long) value.getValue() + 1, Type.NUMBER);
-            } else if (unaryOp instanceof CalculatorParser.PreDecrement) {
-                CalculatorParser.PreDecrement preDecrement = (CalculatorParser.PreDecrement) unaryOp;
-                if (preDecrement.getExpr() instanceof CalculatorParser.IdentifierNode) {
-                    String variableName = ((CalculatorParser.IdentifierNode) preDecrement.getExpr()).getChars();
-                    Value variableValue = variables.get(variableName);
-                    Value updatedValue = new Value((Long) variableValue.getValue() - 1, Type.NUMBER);
-                    variables.put(variableName, updatedValue);
-                    return updatedValue;
-                }
-                return new Value((Long) value.getValue() - 1, Type.NUMBER);
-            } else {
-                throw new IllegalStateException("Unknown unary operator " + unaryOp + " in expression " + expression);
-            }
+            return unaryOperatorExpression(expression);
         } else if (expression instanceof CalculatorParser.BinaryOpNode) {
-            CalculatorParser.BinaryOpNode binaryOp = (CalculatorParser.BinaryOpNode) expression;
-            if (!(binaryOp.getLhs() instanceof CalculatorParser.ExpressionNode)) {
-                throw new IllegalStateException("Expected an expression for lhs of " + expression + " but got " + binaryOp.getLhs().getClass().getSimpleName() + " instead");
-            }
-            if (!(binaryOp.getRhs() instanceof CalculatorParser.ExpressionNode)) {
-                throw new IllegalStateException("Expected an expression for rhs of " + expression + " but got " + binaryOp.getLhs().getClass().getSimpleName() + " instead");
-            }
-            CalculatorParser.ExpressionNode lhs = (CalculatorParser.ExpressionNode) binaryOp.getLhs();
-            CalculatorParser.ExpressionNode rhs = (CalculatorParser.ExpressionNode) binaryOp.getRhs();
-            if (binaryOp instanceof CalculatorParser.AssignmentNode) {
-                if (!(binaryOp.getLhs() instanceof CalculatorParser.IdentifierNode)) {
-                    throw new IllegalStateException("The left hand side of an assignment must be a variable in expression " + binaryOp);
-                }
-                CalculatorParser.IdentifierNode ident = (CalculatorParser.IdentifierNode) binaryOp.getLhs();
-                Value value = evaluateExpression(rhs);
-                variables.put(ident.getChars(), value);
-                return value;
-            }
-            Value left = evaluateExpression(lhs);
-            Value right = evaluateExpression(rhs);
-            if (binaryOp instanceof CalculatorParser.PlusNode) {
-                return binaryPlus(left, right);
-            } else if (binaryOp instanceof CalculatorParser.MinusNode) {
-                return binaryMinus(left, right);
-            } else if (binaryOp instanceof CalculatorParser.MultNode) {
-                return binaryMult(left, right);
-            } else if (binaryOp instanceof CalculatorParser.DivideNode) {
-                return binaryDiv(left, right);
-            } else {
-                throw new IllegalStateException("Don't know how to evaluate binary operator " + expression.getClass().getSimpleName() + " in expression " + expression);
-            }
+            return binaryOperatorExpression(expression);
         }
         throw new IllegalStateException("Don't know how to evaluate expression " + expression);
+    }
+
+    private Value binaryOperatorExpression(final CalculatorParser.ExpressionNode expression) {
+        CalculatorParser.BinaryOpNode binaryOp = (CalculatorParser.BinaryOpNode) expression;
+        if (!(binaryOp.getLhs() instanceof CalculatorParser.ExpressionNode)) {
+            throw new IllegalStateException("Expected an expression for lhs of " + expression + " but got " + binaryOp.getLhs().getClass().getSimpleName() + " instead");
+        }
+        if (!(binaryOp.getRhs() instanceof CalculatorParser.ExpressionNode)) {
+            throw new IllegalStateException("Expected an expression for rhs of " + expression + " but got " + binaryOp.getLhs().getClass().getSimpleName() + " instead");
+        }
+        CalculatorParser.ExpressionNode lhs = (CalculatorParser.ExpressionNode) binaryOp.getLhs();
+        CalculatorParser.ExpressionNode rhs = (CalculatorParser.ExpressionNode) binaryOp.getRhs();
+        if (binaryOp instanceof CalculatorParser.AssignmentNode) {
+            if (!(binaryOp.getLhs() instanceof CalculatorParser.IdentifierNode)) {
+                throw new IllegalStateException("The left hand side of an assignment must be a variable in expression " + binaryOp);
+            }
+            CalculatorParser.IdentifierNode ident = (CalculatorParser.IdentifierNode) binaryOp.getLhs();
+            Value value = evaluateExpression(rhs);
+            variables.put(ident.getChars(), value);
+            return value;
+        }
+        Value left = evaluateExpression(lhs);
+        Value right = evaluateExpression(rhs);
+        if (binaryOp instanceof CalculatorParser.PlusNode) {
+            return binaryPlus(left, right);
+        } else if (binaryOp instanceof CalculatorParser.MinusNode) {
+            return binaryMinus(left, right);
+        } else if (binaryOp instanceof CalculatorParser.MultNode) {
+            return binaryMult(left, right);
+        } else if (binaryOp instanceof CalculatorParser.DivideNode) {
+            return binaryDiv(left, right);
+        } else {
+            throw new IllegalStateException("Don't know how to evaluate binary operator " + expression.getClass().getSimpleName() + " in expression " + expression);
+        }
+    }
+
+    private Value unaryOperatorExpression(final CalculatorParser.ExpressionNode expression) {
+        CalculatorParser.UnaryOpNode unaryOp = (CalculatorParser.UnaryOpNode) expression;
+        if (!(unaryOp.getExpr() instanceof CalculatorParser.ExpressionNode)) {
+            throw new IllegalStateException("Unary operator expected an expression but got " + unaryOp.getExpr() + " in expression " + expression);
+        }
+        Value value = evaluateExpression((CalculatorParser.ExpressionNode) unaryOp.getExpr());
+        if (value.getType() != Type.NUMBER) {
+            throw new IllegalStateException("Unary operator expected a number but got " + value + " in expression " + expression);
+        }
+        if (unaryOp instanceof CalculatorParser.NegativeSigned) {
+            return new Value(-((Long) value.getValue()), Type.NUMBER);
+        } else if (unaryOp instanceof CalculatorParser.PositiveSigned) {
+            return new Value(value.getValue(), Type.NUMBER);
+        } else if (unaryOp instanceof CalculatorParser.PreIncrement) {
+            CalculatorParser.PreIncrement preIncrement = (CalculatorParser.PreIncrement) unaryOp;
+            if (preIncrement.getExpr() instanceof CalculatorParser.IdentifierNode) {
+                String variableName = ((CalculatorParser.IdentifierNode) preIncrement.getExpr()).getChars();
+                Value variableValue = variables.get(variableName);
+                Value updatedValue = new Value((Long) variableValue.getValue() + 1, Type.NUMBER);
+                variables.put(variableName, updatedValue);
+                return updatedValue;
+            }
+            return new Value((Long) value.getValue() + 1, Type.NUMBER);
+        } else if (unaryOp instanceof CalculatorParser.PreDecrement) {
+            CalculatorParser.PreDecrement preDecrement = (CalculatorParser.PreDecrement) unaryOp;
+            if (preDecrement.getExpr() instanceof CalculatorParser.IdentifierNode) {
+                String variableName = ((CalculatorParser.IdentifierNode) preDecrement.getExpr()).getChars();
+                Value variableValue = variables.get(variableName);
+                Value updatedValue = new Value((Long) variableValue.getValue() - 1, Type.NUMBER);
+                variables.put(variableName, updatedValue);
+                return updatedValue;
+            }
+            return new Value((Long) value.getValue() - 1, Type.NUMBER);
+        } else {
+            throw new IllegalStateException("Unknown unary operator " + unaryOp + " in expression " + expression);
+        }
+    }
+
+    private Value identifierExpression(final CalculatorParser.IdentifierNode expression) {
+        CalculatorParser.IdentifierNode ident = expression;
+        String identName = ident.getChars();
+        if (!variables.containsKey(identName)) {
+            throw new IllegalStateException("Could not resolve variable " + identName);
+        }
+        return variables.get(identName);
+    }
+
+    private Value literalExpression(final CalculatorParser.ExpressionNode expression) {
+        CalculatorParser.LiteralNode literal = (CalculatorParser.LiteralNode) expression;
+        try {
+            Long longValue = Long.parseLong(literal.getValue());
+            return new Value(longValue, Type.NUMBER);
+        } catch (NumberFormatException e) {
+            throw new IllegalStateException("Unable to parse literal " + literal.getValue() + " in expression " + expression);
+        }
     }
 
     private Value binaryPlus(Value left, Value right) {
