@@ -6,9 +6,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.List;
 
+import org.byteworks.xl.interpreter.FunctionDefinition;
+import org.byteworks.xl.interpreter.FunctionSignature;
+import org.byteworks.xl.interpreter.Type;
+import org.byteworks.xl.interpreter.TypeList;
 import org.byteworks.xl.lexer.Lexer;
 import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.Parser;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -71,4 +76,11 @@ class CalculatorInterpreterTest {
         assertEquals(expectedVariableValue, testObj.interpreter.getVariable("x").toString());
     }
 
+    @Test
+    void interpretsFunctionDefinition() {
+        String result = execute("f = fn(x:Number, y:Number -> Number) { x + y }");
+        Type number = testObj.interpreter.getType("Number");
+        FunctionDefinition fn = testObj.interpreter.getFunctionDefinition(new FunctionSignature("f", new TypeList(List.of(number, number)), number));
+        assertEquals("f(Number, Number -> Number)", fn.getSignature().toString());
+    }
 }

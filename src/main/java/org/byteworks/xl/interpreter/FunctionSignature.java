@@ -1,6 +1,6 @@
 package org.byteworks.xl.interpreter;
 
-public class FunctionSignature {
+public class FunctionSignature implements Type {
     private final String name;
     private final Type parameterType;
     private final Type returnType;
@@ -11,9 +11,22 @@ public class FunctionSignature {
         this.returnType = returnType;
     }
 
+    public Type getParameterType() {
+        return parameterType;
+    }
+
+    public Type getReturnType() {
+        return returnType;
+    }
+
+    @Override
+    public String name() {
+        return name + "(" + parameterType.toString() + " -> " + returnType.toString() + ")";
+    }
+
     @Override
     public String toString() {
-        return name + "(" + parameterType.toString() + ") -> " + returnType.toString();
+        return name();
     }
 
     @Override
@@ -28,4 +41,5 @@ public class FunctionSignature {
     public int hashCode() {
         return toString().hashCode();
     }
+
 }

@@ -27,6 +27,7 @@ public class CalculatorParser {
         infixParsers.put(TokenType.MINUSMINUS, new MinusMinusInfixParser());
         infixParsers.put(TokenType.COMMA, new CommaInfixParser());
         infixParsers.put(TokenType.ARROW, new ArrowInfixParser());
+        infixParsers.put(TokenType.COLON, new ColonInfixParser());
         prefixParsers.put(TokenType.EOF, new EofPrefixParser());
         prefixParsers.put(TokenType.NUMBER, new NumberPrefixParser());
         prefixParsers.put(TokenType.MINUS, new MinusPrefixParser());
@@ -52,6 +53,7 @@ public class CalculatorParser {
         tokenPrecedence.put(TokenType.ARROW, PrecedencePairs.ARROW);
         tokenPrecedence.put(TokenType.LBRACE, PrecedencePairs.LBRACE);
         tokenPrecedence.put(TokenType.RBRACE, PrecedencePairs.RBRACE);
+        tokenPrecedence.put(TokenType.COLON, PrecedencePairs.COLON);
     }
 
     static class PrecedencePairs {
@@ -70,6 +72,7 @@ public class CalculatorParser {
         static final Pair<Integer,Integer> SIGNED = new Pair<>(null, 10);
         static final Pair<Integer,Integer> PRE_POST_INCREMENT = new Pair<>(11, null);
         static final Pair<Integer,Integer> PRE_POST_DECREMENT = new Pair<>(11, null);
+        static final Pair<Integer,Integer> COLON = new Pair<>(11, 12);
     }
 
     private static class EmptyNode extends Node {
@@ -286,15 +289,15 @@ public class CalculatorParser {
     }
 
     static class FunctionDefinition extends ExpressionNode {
-        private final Node typeSignature;
+        private final ProducesNode typeSignature;
         private final Node body;
 
-        FunctionDefinition(final Node typeSignature, final Node body) {
+        FunctionDefinition(final ProducesNode typeSignature, final Node body) {
             this.typeSignature = typeSignature;
             this.body = body;
         }
 
-        public Node getTypeSignature() {
+        public ProducesNode getTypeSignature() {
             return typeSignature;
         }
 
@@ -328,6 +331,29 @@ public class CalculatorParser {
         @Override
         public String toString() {
             return "(" + chars + " (" + arguments + "))";
+        }
+    }
+
+    static class TypeExpression extends ExpressionNode {
+        private final Node target;
+        private final Node typeExpression;
+
+        TypeExpression(final Node target, final Node expression) {
+            this.target = target;
+            typeExpression = expression;
+        }
+
+        public Node getTarget() {
+            return target;
+        }
+
+        public Node getTypeExpression() {
+            return typeExpression;
+        }
+
+        @Override
+        public String toString() {
+            return target + ":" + typeExpression;
         }
     }
 
@@ -435,7 +461,11 @@ public class CalculatorParser {
             if (lexer.peek().getType() != TokenType.LPAREN) {
                 throw new IllegalStateException("A function definition must begin with a type signature beginning with '('");
             }
-            Node typeSignature = parser.parse(lexer, PrecedencePairs.PARENS.getRight());
+            Node node = parser.parse(lexer, PrecedencePairs.PARENS.getRight());
+            if (!(node instanceof ProducesNode)) {
+                throw new IllegalStateException("A function definition must have a type signature of the form ([t1][,t2]*->t)");
+            }
+            ProducesNode typeSignature = (ProducesNode) node;
             Node body = parser.parse(lexer, 0);
             return new FunctionDefinition(typeSignature, body);
         }
@@ -566,6 +596,15 @@ public class CalculatorParser {
         public Node parse(final Node node, final Parser parser, final Lexer lexer) {
             Node right = parser.parse(lexer, PrecedencePairs.ARROW.getRight());
             return new ProducesNode(node, right);
+        }
+    }
+
+    static class ColonInfixParser implements InfixParser {
+
+        @Override
+        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
+            Node typeExpression = parser.parse(lexer, PrecedencePairs.COLON.getRight());
+            return new TypeExpression(node, typeExpression);
         }
     }
 

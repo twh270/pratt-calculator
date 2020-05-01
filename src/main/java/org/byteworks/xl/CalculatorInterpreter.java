@@ -1,8 +1,10 @@
 package org.byteworks.xl;
 
 import java.io.PrintStream;
+import java.util.Collections;
 import java.util.List;
 import java.util.Stack;
+import java.util.stream.Collectors;
 
 import org.byteworks.xl.interpreter.FunctionDefinition;
 import org.byteworks.xl.interpreter.FunctionImplementation;
@@ -109,8 +111,43 @@ public class CalculatorInterpreter {
             return unaryOperatorExpression(expression);
         } else if (expression instanceof CalculatorParser.BinaryOpNode) {
             return binaryOperatorExpression(expression);
+        } else if (expression instanceof CalculatorParser.FunctionDefinition) {
+            return functionDefinition((CalculatorParser.FunctionDefinition) expression);
         }
         throw new IllegalStateException("Don't know how to evaluate expression " + expression);
+    }
+
+    private Value functionDefinition(CalculatorParser.FunctionDefinition functionDefinition) {
+        CalculatorParser.ProducesNode signature = functionDefinition.getTypeSignature();
+        Node left = signature.getLeft();
+        List<CalculatorParser.TypeExpression> paramList = Collections.emptyList();
+        if (left instanceof CalculatorParser.CommaNode) {
+            CalculatorParser.CommaNode params = (CalculatorParser.CommaNode) left;
+            paramList = List.of((CalculatorParser.TypeExpression)params.getLeft(), (CalculatorParser.TypeExpression)params.getRight());
+        }
+        // TODO handle a single parameter
+        List<Type> paramTypes = paramList.stream()
+                .map(CalculatorParser.TypeExpression::getTypeExpression)
+                .map(it -> ((CalculatorParser.IdentifierNode) it).getChars())
+                .map(interpreter::getType)
+                .collect(Collectors.toList());
+        Type parameterType = new TypeList(paramTypes);
+        Type returnType = interpreter.getType(((CalculatorParser.IdentifierNode) signature.getRight()).getChars());
+        FunctionSignature functionSignature = new FunctionSignature("", parameterType, returnType);
+        return new Value(new FunctionDefinition("", parameterType, returnType, new InterpretedFunction(functionDefinition.getBody())), functionSignature);
+    }
+
+    class InterpretedFunction implements FunctionImplementation<Stack<Value>, Value> {
+        private final Node expression;
+
+        InterpretedFunction(final Node expression) {
+            this.expression = expression;
+        }
+
+        @Override
+        public Value apply(final Stack<Value> values) {
+            return evaluateExpression((CalculatorParser.ExpressionNode) expression);
+        }
     }
 
     private Value binaryOperatorExpression(final CalculatorParser.ExpressionNode expression) {
@@ -129,6 +166,10 @@ public class CalculatorInterpreter {
             }
             Value value = evaluateExpression(rhs);
             CalculatorParser.IdentifierNode ident = (CalculatorParser.IdentifierNode) binaryOp.getLhs();
+            if (value.getValue() instanceof FunctionDefinition) {
+                String functionName = ((CalculatorParser.IdentifierNode)lhs).getChars();
+                interpreter.registerFunctionDefinition(functionName, ((FunctionDefinition)value.getValue()));
+            }
             interpreter.assignVariableValue(ident.getChars(), value);
             return value;
         }

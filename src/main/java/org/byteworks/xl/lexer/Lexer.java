@@ -22,6 +22,7 @@ public class Lexer {
         final static Operator ARROW = new Operator("->", TokenType.ARROW);
         final static Operator LBRACE = new Operator("{", TokenType.LBRACE);
         final static Operator RBRACE = new Operator("}", TokenType.RBRACE);
+        final static Operator COLON = new Operator(":", TokenType.COLON);
         final static Keyword FUNCTION_DEFINITION = new Keyword("fn", TokenType.FUNCTION_DEFINITION);
     }
 
@@ -128,6 +129,8 @@ public class Lexer {
             return Tokens.LBRACE;
         } else if (ch == '}') {
             return Tokens.RBRACE;
+        } else if (ch == ':') {
+            return Tokens.COLON;
         }
         return new Unknown(String.valueOf(ch));
     }

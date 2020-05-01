@@ -57,4 +57,8 @@ public class Interpreter {
         }
         return ident;
     }
+
+    public void registerFunctionDefinition(final String name, final FunctionDefinition definition) {
+        registerFunctionDefinition(name, definition.getSignature().getParameterType(), definition.getSignature().getReturnType(), definition.getImpl());
+    }
 }
