@@ -308,6 +308,29 @@ public class CalculatorParser {
         }
     }
 
+    static class FunctionCall extends ExpressionNode {
+        private final String chars;
+        private final Node arguments;
+
+        FunctionCall(final String chars, final Node arguments) {
+            this.chars = chars;
+            this.arguments = arguments;
+        }
+
+        public String getChars() {
+            return chars;
+        }
+
+        public Node getArguments() {
+            return arguments;
+        }
+
+        @Override
+        public String toString() {
+            return "(" + chars + " (" + arguments + "))";
+        }
+    }
+
     static class EofPrefixParser implements PrefixParser {
 
         @Override
@@ -397,6 +420,10 @@ public class CalculatorParser {
 
         @Override
         public Node parse(final Token token, final Parser parser, final Lexer lexer) {
+            if (lexer.peek().getType() == TokenType.LPAREN) {
+                Node arguments = parser.parse(lexer, PrecedencePairs.PARENS.getRight());
+                return new FunctionCall(token.getChars(), arguments);
+            }
             return new IdentifierNode(token.getChars());
         }
     }
