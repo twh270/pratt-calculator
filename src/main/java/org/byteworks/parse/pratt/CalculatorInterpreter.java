@@ -1,95 +1,187 @@
 package org.byteworks.parse.pratt;
 
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Stack;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class CalculatorInterpreter {
+    private static final String TYPE_NUMBER = "Number";
+    private static final String TYPE_TWO_NUMBER = "TwoNumber";
+
     private final Map<String, Value> heap = new HashMap<>();
     private final Map<FunctionSignature, FunctionDefinition> functions = new HashMap<>();
     private final Stack<Value> stack = new Stack<>();
+    private final Map<String, Type> types = new HashMap<>();
 
-    private final List<Type> twoNumeric = List.of(Type.NUMBER, Type.NUMBER);
-    private final List<Type> oneNumeric = List.of(Type.NUMBER);
+    private Type getType(String name) {
+        Type type = types.get(name);
+        if (type == null) {
+            throw new IllegalArgumentException("Could not find type '" + name + "'");
+        }
+        return type;
+    }
 
-    private final FunctionDefinition numericAddition = new FunctionDefinition("add", twoNumeric, Type.NUMBER, (FunctionImplementation<Stack<Value>, Value>) stack -> {
+    private final FunctionImplementation<Stack<Value>, Value> numericAddition = stack -> {
         Value left = stack.pop();
         Value right = stack.pop();
-        checkOperandType(left, Type.NUMBER, "binary addition", "left");
-        checkOperandType(right, Type.NUMBER, "binary addition", "right");
+        checkOperandType(left, getType(TYPE_NUMBER), "binary addition", "left");
+        checkOperandType(right, getType(TYPE_NUMBER), "binary addition", "right");
         Long leftValue = (Long) left.getValue();
         Long rightValue = (Long) right.getValue();
-        return new Value(leftValue + rightValue, Type.NUMBER);
-    });
-    private final FunctionDefinition numericSubtraction = new FunctionDefinition("subtract", twoNumeric, Type.NUMBER, (FunctionImplementation<Stack<Value>, Value>) stack -> {
+        return new Value(leftValue + rightValue, getType(TYPE_NUMBER));
+    };
+    private final FunctionImplementation<Stack<Value>, Value> numericSubtraction = stack -> {
         Value left = stack.pop();
         Value right = stack.pop();
-        checkOperandType(left, Type.NUMBER, "binary subtraction", "left");
-        checkOperandType(right, Type.NUMBER, "binary subtraction", "right");
+        checkOperandType(left, getType(TYPE_NUMBER), "binary subtraction", "left");
+        checkOperandType(right, getType(TYPE_NUMBER), "binary subtraction", "right");
         Long leftValue = (Long) left.getValue();
         Long rightValue = (Long) right.getValue();
-        return new Value(leftValue - rightValue, Type.NUMBER);
-    });
-    private final FunctionDefinition numericMultiplication = new FunctionDefinition("multiply", twoNumeric, Type.NUMBER, (FunctionImplementation<Stack<Value>, Value>) stack -> {
+        return new Value(leftValue - rightValue, getType(TYPE_NUMBER));
+    };
+    private final FunctionImplementation<Stack<Value>, Value> numericMultiplication = stack -> {
         Value left = stack.pop();
         Value right = stack.pop();
-        checkOperandType(left, Type.NUMBER, "binary multiplication", "left");
-        checkOperandType(right, Type.NUMBER, "binary multiplication", "right");
+        checkOperandType(left, getType(TYPE_NUMBER), "binary multiplication", "left");
+        checkOperandType(right, getType(TYPE_NUMBER), "binary multiplication", "right");
         Long leftValue = (Long) left.getValue();
         Long rightValue = (Long) right.getValue();
-        return new Value(leftValue * rightValue, Type.NUMBER);
-    });
-    private final FunctionDefinition numericDivision = new FunctionDefinition("divide", twoNumeric, Type.NUMBER, (FunctionImplementation<Stack<Value>, Value>) stack -> {
+        return new Value(leftValue * rightValue, getType(TYPE_NUMBER));
+    };
+    private final FunctionImplementation<Stack<Value>, Value> numericDivision = stack -> {
         Value left = stack.pop();
         Value right = stack.pop();
-        checkOperandType(left, Type.NUMBER, "binary division", "left");
-        checkOperandType(right, Type.NUMBER, "binary division", "right");
+        checkOperandType(left, getType(TYPE_NUMBER), "binary division", "left");
+        checkOperandType(right, getType(TYPE_NUMBER), "binary division", "right");
         Long leftValue = (Long) left.getValue();
         Long rightValue = (Long) right.getValue();
-        return new Value(leftValue / rightValue, Type.NUMBER);
-    });
-    private final FunctionDefinition preIncrement = new FunctionDefinition("preincrement", oneNumeric, Type.NUMBER, (FunctionImplementation<Stack<Value>, Value>) stack -> {
+        return new Value(leftValue / rightValue, getType(TYPE_NUMBER));
+    };
+    private final FunctionImplementation<Stack<Value>, Value> preIncrement = stack -> {
         Value operand = stack.pop();
-        checkOperandType(operand, Type.NUMBER, "pre-increment", "operand");
-        return new Value((Long) operand.getValue() + 1, Type.NUMBER);
-    });
-    private final FunctionDefinition preDecrement = new FunctionDefinition("predecrement", oneNumeric, Type.NUMBER, (FunctionImplementation<Stack<Value>, Value>) stack -> {
+        checkOperandType(operand, getType(TYPE_NUMBER), "pre-increment", "operand");
+        return new Value((Long) operand.getValue() + 1, getType(TYPE_NUMBER));
+    };
+    private final FunctionImplementation<Stack<Value>, Value> preDecrement = stack -> {
         Value operand = stack.pop();
-        checkOperandType(operand, Type.NUMBER, "pre-decrement", "operand");
-        return new Value((Long) operand.getValue() - 1, Type.NUMBER);
-    });
-    private final FunctionDefinition postIncrement = new FunctionDefinition("postincrement", oneNumeric, Type.NUMBER, (FunctionImplementation<Stack<Value>, Value>) stack -> {
+        checkOperandType(operand, getType(TYPE_NUMBER), "pre-decrement", "operand");
+        return new Value((Long) operand.getValue() - 1, getType(TYPE_NUMBER));
+    };
+    private final FunctionImplementation<Stack<Value>, Value> postIncrement = stack -> {
         Value operand = stack.pop();
-        checkOperandType(operand, Type.NUMBER, "post-increment", "operand");
-        return new Value((Long) operand.getValue() + 1, Type.NUMBER);
-    });
-    private final FunctionDefinition postDecrement = new FunctionDefinition("postdecrement", oneNumeric, Type.NUMBER, (FunctionImplementation<Stack<Value>, Value>) stack -> {
+        checkOperandType(operand, getType(TYPE_NUMBER), "post-increment", "operand");
+        return new Value((Long) operand.getValue() + 1, getType(TYPE_NUMBER));
+    };
+    private final FunctionImplementation<Stack<Value>, Value> postDecrement = stack -> {
         Value operand = stack.pop();
-        checkOperandType(operand, Type.NUMBER, "post-decrement", "operand");
-        return new Value((Long) operand.getValue() - 1, Type.NUMBER);
-    });
+        checkOperandType(operand, getType(TYPE_NUMBER), "post-decrement", "operand");
+        return new Value((Long) operand.getValue() - 1, getType(TYPE_NUMBER));
+    };
 
     public CalculatorInterpreter() {
-        functions.put(numericAddition.getSignature(), numericAddition);
-        functions.put(numericSubtraction.getSignature(), numericSubtraction);
-        functions.put(numericMultiplication.getSignature(), numericMultiplication);
-        functions.put(numericDivision.getSignature(), numericDivision);
-        functions.put(preIncrement.getSignature(), preIncrement);
-        functions.put(preDecrement.getSignature(), preDecrement);
-        functions.put(postIncrement.getSignature(), postIncrement);
-        functions.put(postDecrement.getSignature(), postDecrement);
+        Type number = new SimpleType(TYPE_NUMBER);
+        types.put(TYPE_NUMBER, number);
+        Type twoNumber = new TypeList(List.of(types.get(TYPE_NUMBER), types.get(TYPE_NUMBER)));
+        types.put(TYPE_TWO_NUMBER, twoNumber);
+        registerFunction("add", twoNumber, number, numericAddition);
+        registerFunction("subtract", twoNumber, number, numericSubtraction);
+        registerFunction("multiply", twoNumber, number, numericMultiplication);
+        registerFunction("divide", twoNumber, number, numericDivision);
+        registerFunction("preincrement", number, number, preIncrement);
+        registerFunction("predecrement", number, number, preDecrement);
+        registerFunction("postincrement", number, number, postIncrement);
+        registerFunction("postdecrement", number, number, postDecrement);
+    }
+
+    private void registerFunction(String name, Type parameterType, Type returnType, FunctionImplementation impl) {
+        FunctionDefinition def = new FunctionDefinition(name, parameterType, returnType, impl);
+        functions.put(def.getSignature(), def);
     }
 
     public Value getVariable(final String name) {
         return heap.get(name);
     }
 
-    public enum Type {
-        NUMBER
+    public interface Type {
+        String name();
+    }
+
+    public class SimpleType implements Type {
+        private final String name;
+
+        public SimpleType(final String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            final SimpleType type = (SimpleType) o;
+            return name.equals(type.name);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(name);
+        }
+
+        @Override
+        public String toString() {
+            return name();
+        }
+    }
+
+    public class TypeList implements Type {
+        private final List<Type> types;
+        private final String name;
+
+        public TypeList(final List<Type> types) {
+            this.types = new ArrayList<>(types);
+            name = types.stream().map(Type::name).collect(Collectors.joining(", "));
+        }
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            final TypeList list = (TypeList) o;
+            return name.equals(list.name);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(name);
+        }
+
+        @Override
+        public String toString() {
+            return name;
+        }
     }
 
     interface FunctionImplementation<T extends Stack<Value>, U extends Value> extends Function<T, U> {
@@ -97,18 +189,18 @@ public class CalculatorInterpreter {
 
     class FunctionSignature {
         private final String name;
-        private final List<Type> parameterTypes;
+        private final Type parameterType;
         private final Type returnType;
 
-        FunctionSignature(final String name, final List<Type> parameterTypes, final Type returnType) {
+        FunctionSignature(final String name, final Type parameterType, final Type returnType) {
             this.name = name;
-            this.parameterTypes = parameterTypes;
+            this.parameterType = parameterType;
             this.returnType = returnType;
         }
 
         @Override
         public String toString() {
-            return name + "(" + parameterTypes.stream().map(Enum::toString).collect(Collectors.joining(",")) + ") -> " + returnType.toString();
+            return name + "(" + parameterType.toString() + ") -> " + returnType.toString();
         }
 
         @Override
@@ -129,8 +221,8 @@ public class CalculatorInterpreter {
         private final FunctionSignature signature;
         private final FunctionImplementation<Stack<Value>, Value> impl;
 
-        FunctionDefinition(final String name, final List<Type> parameterTypes, final Type returnType, final FunctionImplementation impl) {
-            this.signature = new FunctionSignature(name, parameterTypes, returnType);
+        FunctionDefinition(final String name, final Type parameterType, final Type returnType, final FunctionImplementation impl) {
+            this.signature = new FunctionSignature(name, parameterType, returnType);
             this.impl = impl;
         }
 
@@ -230,20 +322,20 @@ public class CalculatorInterpreter {
     }
 
     private Value callBinaryNumericFunction(final Value left, final Value right, final String name) {
-        FunctionDefinition fn = getFunction(name, twoNumeric, Type.NUMBER);
+        FunctionDefinition fn = getFunction(name, TYPE_TWO_NUMBER, TYPE_NUMBER);
         stack.push(right);
         stack.push(left);
         return fn.execute(stack);
     }
 
     private Value callUnaryNumericFunction(final Value arg, final String name) {
-        FunctionDefinition fn = getFunction(name, oneNumeric, Type.NUMBER);
+        FunctionDefinition fn = getFunction(name, TYPE_NUMBER, TYPE_NUMBER);
         stack.push(arg);
         return fn.execute(stack);
     }
 
-    private FunctionDefinition getFunction(String name, List<Type> parameterTypes, Type returnType) {
-        FunctionSignature signature = new FunctionSignature(name, parameterTypes, returnType);
+    private FunctionDefinition getFunction(String name, String parameterType, String returnType) {
+        FunctionSignature signature = new FunctionSignature(name, getType(parameterType), getType(returnType));
         FunctionDefinition fn = functions.get(signature);
         if (fn == null) {
             throw new IllegalArgumentException("Could not find function matching signature '" + signature + "'");
@@ -251,16 +343,20 @@ public class CalculatorInterpreter {
         return fn;
     }
 
+    private void checkType(Type type, Type expected, String error) {
+        if (!expected.equals(type)) {
+            throw new IllegalStateException(String.format(error, expected, type));
+        }
+    }
+
     private Value unaryOperatorExpression(final CalculatorParser.ExpressionNode expression) {
         CalculatorParser.UnaryOpNode unaryOp = (CalculatorParser.UnaryOpNode) expression;
         Value operand = evaluateExpression(unaryOp.getExpr());
-        if (operand.getType() != Type.NUMBER) {
-            throw new IllegalStateException("Unary operator expected a number but got " + operand + " in expression " + expression);
-        }
+        checkType(operand.getType(), getType(TYPE_NUMBER), "Unary operator expected a %s but got %s in expression " + expression);
         if (unaryOp instanceof CalculatorParser.NegativeSigned) {
-            return new Value(-((Long) operand.getValue()), Type.NUMBER);
+            return new Value(-((Long) operand.getValue()), getType(TYPE_NUMBER));
         } else if (unaryOp instanceof CalculatorParser.PositiveSigned) {
-            return new Value(operand.getValue(), Type.NUMBER);
+            return new Value(operand.getValue(), getType(TYPE_NUMBER));
         } else if (unaryOp instanceof CalculatorParser.PreIncrement) {
             Value result = callUnaryNumericFunction(operand, "preincrement");
             if (unaryOp.getExpr() instanceof CalculatorParser.IdentifierNode) {
@@ -302,7 +398,7 @@ public class CalculatorInterpreter {
         CalculatorParser.LiteralNode literal = (CalculatorParser.LiteralNode) expression;
         try {
             Long longValue = Long.parseLong(literal.getValue());
-            return new Value(longValue, Type.NUMBER);
+            return new Value(longValue, getType(TYPE_NUMBER));
         } catch (NumberFormatException e) {
             throw new IllegalStateException("Unable to parse literal " + literal.getValue() + " in expression " + expression);
         }
