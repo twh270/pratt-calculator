@@ -9,7 +9,8 @@ import java.util.List;
 import org.byteworks.xl.lexer.Lexer;
 import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.Parser;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class CalculatorInterpreterTest {
 
@@ -34,126 +35,40 @@ class CalculatorInterpreterTest {
         return new String(baos.toByteArray());
     }
 
-    @Test
-    void interpretsAddition() {
-        String result = execute("1 + 2");
-        assertEquals("3: Number\n", result);
+    @ParameterizedTest(name = "{index} {0}")
+    @CsvSource({
+            "addition, '1 + 2', '3: Number\n'",
+            "expression 1, '1 + 2 * 3', '7: Number\n'",
+            "expression 2, '4 * 1 + 2 * 3', '10: Number\n'",
+            "expression - all operators, '3 * 4 + 6 - 8 / 2', '14: Number\n'",
+            "expression - negative number, '-3 + 4', '1: Number\n'",
+            "expression - positive number, '3 + +4', '7: Number\n'",
+            "parenthesized, '(3 + 4) * 2', '14: Number\n'",
+            "pre-increment, '++4', '5: Number\n'",
+            "pre-decrement, '--4', '3: Number\n'",
+            "post-increment, '4++', '4: Number\n'",
+            "post-decrement, '4--', '4: Number\n'"
+    })
+    void interpretsSimpleInput(String name, String input, String expectedOutput) {
+        String result = execute(input);
+        assertEquals(expectedOutput, result);
     }
 
-    @Test
-    void interpretsSimpleExpression() {
-        String result = execute("1 + 2 * 3");
-        assertEquals("7: Number\n", result);
-    }
-
-    @Test
-    void interpretsComplexExpression() {
-        String result = execute("4 * 1 + 2 * 3");
-        assertEquals("10: Number\n", result);
-    }
-
-    @Test
-    void interpretsComplexExpressionAllOperators() {
-        String result = execute("3 * 4 + 6 - 8 / 2");
-        assertEquals("14: Number\n", result);
-    }
-
-    @Test
-    void interpretsExpressionWithNegativeSignedNumber() {
-        String result = execute("-3 + 4");
-        assertEquals("1: Number\n", result);
-    }
-
-    @Test
-    void interpretsExpressionWithPositiveSignedNumber() {
-        String result = execute("3 + +4");
-        assertEquals("7: Number\n", result);
-    }
-
-    @Test
-    void interpretsParenthesized() {
-        String result = execute("(3 + 4) * 2");
-        assertEquals("14: Number\n", result);
-    }
-
-    @Test
-    void interpretsVariableAssignment() {
-        String result = execute("x = 3 + 4");
-        assertEquals("7: Number\n", result);
-        assertEquals("7: Number", testObj.interpreter.getVariable("x").toString());
-    }
-
-    @Test
-    void interpretsVariableAssignmentAndEvaluation() {
-        String result = execute("x = 3 + 4\nx * 2");
-        assertEquals("7: Number\n14: Number\n", result);
-        assertEquals("7: Number", testObj.interpreter.getVariable("x").toString());
-    }
-
-    @Test
-    void interpretsPreIncrementNumber() {
-        String result = execute("++4");
-        assertEquals("5: Number\n", result);
-    }
-
-    @Test
-    void interpretsPreDecrementNumber() {
-        String result = execute("--4");
-        assertEquals("3: Number\n", result);
-    }
-
-    @Test
-    void interpretsPreIncrementVariable() {
-        String result = execute("x = 3 + 4\n++x");
-        assertEquals("7: Number\n8: Number\n", result);
-        assertEquals("8: Number", testObj.interpreter.getVariable("x").toString());
-    }
-
-    @Test
-    void interpretsPreDecrementVariable() {
-        String result = execute("x = 3 + 4\n--x");
-        assertEquals("7: Number\n6: Number\n", result);
-        assertEquals("6: Number", testObj.interpreter.getVariable("x").toString());
-    }
-
-    @Test
-    void interpretsPostIncrementNumber() {
-        String result = execute("4++");
-        assertEquals("4: Number\n", result);
-    }
-
-    @Test
-    void interpretsPostIncrementVariable() {
-        String result = execute("x = 3 + 4\nx++");
-        assertEquals("7: Number\n7: Number\n", result);
-        assertEquals("8: Number", testObj.interpreter.getVariable("x").toString());
-    }
-
-    @Test
-    void interpretsPostDecrementNumber() {
-        String result = execute("4--");
-        assertEquals("4: Number\n", result);
-    }
-
-    @Test
-    void interpretsPostDecrementVariable() {
-        String result = execute("x = 3 + 4\nx--");
-        assertEquals("7: Number\n7: Number\n", result);
-        assertEquals("6: Number", testObj.interpreter.getVariable("x").toString());
-    }
-
-    @Test
-    void interpretsPostIncrementPrecedence() {
-        String result = execute("x = 3\n2+++x");
-        assertEquals("3: Number\n5: Number\n", result);
-        assertEquals("3: Number", testObj.interpreter.getVariable("x").toString());
-    }
-
-    @Test
-    void interpretsPostDecrementPrecedence() {
-        String result = execute("x = 3\nx---2");
-        assertEquals("3: Number\n1: Number\n", result);
-        assertEquals("2: Number", testObj.interpreter.getVariable("x").toString());
+    @ParameterizedTest(name = "{index} {0}")
+    @CsvSource({
+            "simple assignment, 'x = 3 + 4', '7: Number\n', '7: Number'",
+            "assign and evaluate, 'x = 3 + 4\nx * 2', '7: Number\n14: Number\n', '7: Number'",
+            "pre-increment, 'x = 3 + 4\n++x', '7: Number\n8: Number\n', '8: Number'",
+            "pre-decrement, 'x = 3 + 4\n--x', '7: Number\n6: Number\n', '6: Number'",
+            "post-increment, 'x = 3 + 4\nx++', '7: Number\n7: Number\n', '8: Number'",
+            "post-decrement, 'x = 3 + 4\nx--', '7: Number\n7: Number\n', '6: Number'",
+            "post-increment precedence, 'x = 3\n2+++x', '3: Number\n5: Number\n', '3: Number'",
+            "post-decrement precedence, 'x = 3\nx---2', '3: Number\n1: Number\n', '2: Number'"
+    })
+    void interpretsVariableExpressions(String name, String input, String expectedOutput, String expectedVariableValue) {
+        String result = execute(input);
+        assertEquals(expectedOutput, result);
+        assertEquals(expectedVariableValue, testObj.interpreter.getVariable("x").toString());
     }
 
 }
