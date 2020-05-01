@@ -82,5 +82,6 @@ class CalculatorInterpreterTest {
         Type number = testObj.interpreter.getType("Number");
         FunctionDefinition fn = testObj.interpreter.getFunctionDefinition("f", new FunctionSignature( new TypeList(List.of(number, number)), number));
         assertEquals("(Number, Number -> Number)", fn.getSignature().toString());
+        assertEquals("f = fn(Number, Number -> Number): (Number, Number -> Number)\n", result);
     }
 }

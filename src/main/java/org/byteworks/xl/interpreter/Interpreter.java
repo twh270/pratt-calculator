@@ -11,7 +11,7 @@ public class Interpreter {
     private final Stack<Value> stack = new Stack<>();
     private final Map<String, Type> types = new HashMap<>();
 
-    public void registerFunctionDefinition(String name, Type parameterType, Type returnType, FunctionImplementation<Stack<Value>, Value> impl) {
+    public FunctionDefinition registerFunctionDefinition(String name, Type parameterType, Type returnType, FunctionImplementation<Stack<Value>, Value> impl) {
         FunctionDefinition def = new FunctionDefinition(name, parameterType, returnType, impl);
         Map<FunctionSignature, FunctionDefinition> bound = functions.get(name);
         if (bound == null) {
@@ -19,6 +19,7 @@ public class Interpreter {
             functions.put(name, bound);
         }
         bound.put(def.getSignature(), def);
+        return def;
     }
 
     public FunctionDefinition getFunctionDefinition(final String name, final FunctionSignature signature) {

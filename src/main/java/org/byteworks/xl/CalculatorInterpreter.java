@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Stack;
 import java.util.stream.Collectors;
 
+import org.byteworks.xl.interpreter.Function;
 import org.byteworks.xl.interpreter.FunctionDefinition;
 import org.byteworks.xl.interpreter.FunctionImplementation;
 import org.byteworks.xl.interpreter.FunctionSignature;
@@ -134,7 +135,7 @@ public class CalculatorInterpreter {
         Type parameterType = new TypeList(paramTypes);
         Type returnType = interpreter.getType(((CalculatorParser.IdentifierNode) signature.getRight()).getChars());
         FunctionSignature functionSignature = new FunctionSignature(parameterType, returnType);
-        return new Value(new FunctionDefinition("", parameterType, returnType, new InterpretedFunction(functionDefinition.getBody())), functionSignature);
+        return new Value(new Function(new FunctionSignature(parameterType, returnType), new InterpretedFunction(functionDefinition.getBody())), functionSignature);
     }
 
     class InterpretedFunction implements FunctionImplementation<Stack<Value>, Value> {
@@ -166,9 +167,11 @@ public class CalculatorInterpreter {
             }
             Value value = evaluateExpression(rhs);
             CalculatorParser.IdentifierNode ident = (CalculatorParser.IdentifierNode) binaryOp.getLhs();
-            if (value.getValue() instanceof FunctionDefinition) {
+            if (value.getValue() instanceof Function) {
+                Function function = (Function) value.getValue();
                 String functionName = ((CalculatorParser.IdentifierNode)lhs).getChars();
-                interpreter.registerFunctionDefinition(functionName, ((FunctionDefinition)value.getValue()));
+                FunctionSignature signature = function.getSignature();
+                value = new Value(interpreter.registerFunctionDefinition(functionName, signature.getParameterType(), signature.getReturnType(), function.getImpl()), function.getSignature());
             }
             interpreter.assignVariableValue(ident.getChars(), value);
             return value;
