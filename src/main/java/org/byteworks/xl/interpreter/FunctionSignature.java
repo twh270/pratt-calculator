@@ -1,12 +1,12 @@
 package org.byteworks.xl.interpreter;
 
+import java.util.Objects;
+
 public class FunctionSignature implements Type {
-    private final String name;
     private final Type parameterType;
     private final Type returnType;
 
-    public FunctionSignature(final String name, final Type parameterType, final Type returnType) {
-        this.name = name;
+    public FunctionSignature(final Type parameterType, final Type returnType) {
         this.parameterType = parameterType;
         this.returnType = returnType;
     }
@@ -21,7 +21,7 @@ public class FunctionSignature implements Type {
 
     @Override
     public String name() {
-        return name + "(" + parameterType.toString() + " -> " + returnType.toString() + ")";
+        return "(" + parameterType.toString() + " -> " + returnType.toString() + ")";
     }
 
     @Override
@@ -30,16 +30,19 @@ public class FunctionSignature implements Type {
     }
 
     @Override
-    public boolean equals(final Object obj) {
-        if (obj instanceof FunctionSignature) {
-            return obj.toString().equals(this.toString());
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
         }
-        return false;
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        final FunctionSignature signature = (FunctionSignature) o;
+        return parameterType.equals(signature.parameterType) && returnType.equals(signature.returnType);
     }
 
     @Override
     public int hashCode() {
-        return toString().hashCode();
+        return Objects.hash(parameterType, returnType);
     }
-
 }

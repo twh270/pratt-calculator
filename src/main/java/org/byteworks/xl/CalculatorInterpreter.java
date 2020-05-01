@@ -82,12 +82,12 @@ public class CalculatorInterpreter {
     public CalculatorInterpreter() {
         Type number = new SimpleType(TYPE_NUMBER);
         interpreter.registerType(TYPE_NUMBER, number);
-        Type twoNumber = new TypeList(List.of(interpreter.getType(TYPE_NUMBER), interpreter.getType(TYPE_NUMBER)));
-        interpreter.registerType(TYPE_TWO_NUMBERS, twoNumber);
-        interpreter.registerFunctionDefinition("add", twoNumber, number, numericAddition);
-        interpreter.registerFunctionDefinition("subtract", twoNumber, number, numericSubtraction);
-        interpreter.registerFunctionDefinition("multiply", twoNumber, number, numericMultiplication);
-        interpreter.registerFunctionDefinition("divide", twoNumber, number, numericDivision);
+        Type twoNumbers = new TypeList(List.of(interpreter.getType(TYPE_NUMBER), interpreter.getType(TYPE_NUMBER)));
+        interpreter.registerType(TYPE_TWO_NUMBERS, twoNumbers);
+        interpreter.registerFunctionDefinition("add", twoNumbers, number, numericAddition);
+        interpreter.registerFunctionDefinition("subtract", twoNumbers, number, numericSubtraction);
+        interpreter.registerFunctionDefinition("multiply", twoNumbers, number, numericMultiplication);
+        interpreter.registerFunctionDefinition("divide", twoNumbers, number, numericDivision);
         interpreter.registerFunctionDefinition("preincrement", number, number, preIncrement);
         interpreter.registerFunctionDefinition("predecrement", number, number, preDecrement);
         interpreter.registerFunctionDefinition("postincrement", number, number, postIncrement);
@@ -133,7 +133,7 @@ public class CalculatorInterpreter {
                 .collect(Collectors.toList());
         Type parameterType = new TypeList(paramTypes);
         Type returnType = interpreter.getType(((CalculatorParser.IdentifierNode) signature.getRight()).getChars());
-        FunctionSignature functionSignature = new FunctionSignature("", parameterType, returnType);
+        FunctionSignature functionSignature = new FunctionSignature(parameterType, returnType);
         return new Value(new FunctionDefinition("", parameterType, returnType, new InterpretedFunction(functionDefinition.getBody())), functionSignature);
     }
 
@@ -199,8 +199,8 @@ public class CalculatorInterpreter {
     }
 
     private FunctionDefinition getFunction(String name, String parameterType, String returnType) {
-        FunctionSignature signature = new FunctionSignature(name, interpreter.getType(parameterType), interpreter.getType(returnType));
-        return interpreter.getFunctionDefinition(signature);
+        FunctionSignature signature = new FunctionSignature(interpreter.getType(parameterType), interpreter.getType(returnType));
+        return interpreter.getFunctionDefinition(name, signature);
     }
 
     private void checkType(Type type, Type expected, String error) {

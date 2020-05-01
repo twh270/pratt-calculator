@@ -7,20 +7,25 @@ import java.util.Stack;
 
 public class Interpreter {
     private final Map<String, Value> heap = new HashMap<>();
-    private final Map<FunctionSignature, FunctionDefinition> functions = new HashMap<>();
+    private final Map<String, Map<FunctionSignature, FunctionDefinition>> functions = new HashMap<>();
     private final Stack<Value> stack = new Stack<>();
     private final Map<String, Type> types = new HashMap<>();
 
-
     public void registerFunctionDefinition(String name, Type parameterType, Type returnType, FunctionImplementation<Stack<Value>, Value> impl) {
         FunctionDefinition def = new FunctionDefinition(name, parameterType, returnType, impl);
-        functions.put(def.getSignature(), def);
+        Map<FunctionSignature, FunctionDefinition> bound = functions.get(name);
+        if (bound == null) {
+            bound = new HashMap<>();
+            functions.put(name, bound);
+        }
+        bound.put(def.getSignature(), def);
     }
 
-    public FunctionDefinition getFunctionDefinition(final FunctionSignature signature) {
-        FunctionDefinition functionDefinition = functions.get(signature);
+    public FunctionDefinition getFunctionDefinition(final String name, final FunctionSignature signature) {
+        Map<FunctionSignature, FunctionDefinition> bound = functions.get(name);
+        FunctionDefinition functionDefinition = bound.get(signature);
         if (functionDefinition == null) {
-            throw new IllegalArgumentException("Could not find function definition for '" + signature + "'");
+            throw new IllegalArgumentException("Could not find function definition for function name '" + name + "' with signature '" + signature + "'");
         }
         return functionDefinition;
     }

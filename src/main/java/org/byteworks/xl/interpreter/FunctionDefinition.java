@@ -6,9 +6,8 @@ public class FunctionDefinition {
     private final FunctionSignature signature;
     private final FunctionImplementation<Stack<Value>, Value> impl;
 
-    // TODO get rid of the name as part of the signature
     public FunctionDefinition(final String name, final Type parameterType, final Type returnType, final FunctionImplementation<Stack<Value>, Value> impl) {
-        this.signature = new FunctionSignature(name, parameterType, returnType);
+        this.signature = new FunctionSignature(parameterType, returnType);
         this.impl = impl;
     }
 
