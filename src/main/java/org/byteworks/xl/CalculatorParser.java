@@ -25,6 +25,8 @@ public class CalculatorParser {
         infixParsers.put(TokenType.ASSIGNMENT, new AssignmentInfixParser());
         infixParsers.put(TokenType.PLUSPLUS, new PlusPlusInfixParser());
         infixParsers.put(TokenType.MINUSMINUS, new MinusMinusInfixParser());
+        infixParsers.put(TokenType.COMMA, new CommaInfixParser());
+        infixParsers.put(TokenType.ARROW, new ArrowInfixParser());
         prefixParsers.put(TokenType.EOF, new EofPrefixParser());
         prefixParsers.put(TokenType.NUMBER, new NumberPrefixParser());
         prefixParsers.put(TokenType.MINUS, new MinusPrefixParser());
@@ -34,6 +36,8 @@ public class CalculatorParser {
         prefixParsers.put(TokenType.EOL, new EndOfLinePrefixParser());
         prefixParsers.put(TokenType.PLUSPLUS, new PlusPlusPrefixParser());
         prefixParsers.put(TokenType.MINUSMINUS, new MinusMinusPrefixParser());
+        prefixParsers.put(TokenType.FUNCTION_DEFINITION, new FunctionDefinitionPrefixParser());
+        prefixParsers.put(TokenType.LBRACE, new LeftBracePrefixParser());
         tokenPrecedence.put(TokenType.PLUS, PrecedencePairs.PLUS_MINUS);
         tokenPrecedence.put(TokenType.MINUS, PrecedencePairs.PLUS_MINUS);
         tokenPrecedence.put(TokenType.MULTIPLY, PrecedencePairs.MULT_DIV);
@@ -44,18 +48,26 @@ public class CalculatorParser {
         tokenPrecedence.put(TokenType.ASSIGNMENT, PrecedencePairs.ASSIGNMENT);
         tokenPrecedence.put(TokenType.PLUSPLUS, PrecedencePairs.PRE_POST_INCREMENT);
         tokenPrecedence.put(TokenType.MINUSMINUS, PrecedencePairs.PRE_POST_DECREMENT);
+        tokenPrecedence.put(TokenType.COMMA, PrecedencePairs.COMMA);
+        tokenPrecedence.put(TokenType.ARROW, PrecedencePairs.ARROW);
+        tokenPrecedence.put(TokenType.LBRACE, PrecedencePairs.LBRACE);
+        tokenPrecedence.put(TokenType.RBRACE, PrecedencePairs.RBRACE);
     }
 
     static class PrecedencePairs {
         static final Pair<Integer,Integer> EOF = new Pair<>(-1, null);
         static final Pair<Integer,Integer> EOL = new Pair<>(-1, 0);
         static final Pair<Integer,Integer> PARENS = new Pair<>(-1, 0);
-        static final Pair<Integer,Integer> PLUS_MINUS = new Pair<>(3, 4);
-        static final Pair<Integer,Integer> MULT_DIV = new Pair<>(7, 8);
-        static final Pair<Integer,Integer> SIGNED = new Pair<>(null, 10);
-        static final Pair<Integer,Integer> ASSIGNMENT = new Pair<>(1, 2);
+        static final Pair<Integer,Integer> LBRACE = new Pair<>(-1, 0);
+        static final Pair<Integer,Integer> RBRACE = new Pair<>(-1, 0);
         static final Pair<Integer,Integer> PRE_INCREMENT = new Pair<>(null, 2);
         static final Pair<Integer,Integer> PRE_DECREMENT = new Pair<>(null, 2);
+        static final Pair<Integer,Integer> COMMA = new Pair<>(1, 2);
+        static final Pair<Integer,Integer> ARROW = new Pair<>(1, 2);
+        static final Pair<Integer,Integer> ASSIGNMENT = new Pair<>(3, 4);
+        static final Pair<Integer,Integer> PLUS_MINUS = new Pair<>(5, 6);
+        static final Pair<Integer,Integer> MULT_DIV = new Pair<>(7, 8);
+        static final Pair<Integer,Integer> SIGNED = new Pair<>(null, 10);
         static final Pair<Integer,Integer> PRE_POST_INCREMENT = new Pair<>(11, null);
         static final Pair<Integer,Integer> PRE_POST_DECREMENT = new Pair<>(11, null);
     }
@@ -210,6 +222,92 @@ public class CalculatorParser {
         }
     }
 
+    public static class CommaNode extends ExpressionNode {
+        private final Node left;
+        private final Node right;
+
+        public CommaNode(final Node left, final Node right) {
+            this.left = left;
+            this.right = right;
+        }
+
+        public Node getLeft() {
+            return left;
+        }
+
+        public Node getRight() {
+            return right;
+        }
+
+        @Override
+        public String toString() {
+            return left.toString() + ", " + right.toString();
+        }
+    }
+
+    public static class ProducesNode extends ExpressionNode {
+        private final Node left;
+        private final Node right;
+
+        public ProducesNode(final Node left, final Node right) {
+            this.left = left;
+            this.right = right;
+        }
+
+        public Node getLeft() {
+            return left;
+        }
+
+        public Node getRight() {
+            return right;
+        }
+
+        @Override
+        public String toString() {
+            return "(" + left + " -> " + right + ")";
+        }
+    }
+
+    static class ExpressionList extends ExpressionNode {
+        private final Node list;
+
+        ExpressionList(final Node list) {
+            this.list = list;
+        }
+
+        public Node getList() {
+            return list;
+        }
+
+        @Override
+        public String toString() {
+            return "{ " + list.toString() + " }";
+        }
+    }
+
+    static class FunctionDefinition extends ExpressionNode {
+        private final Node typeSignature;
+        private final Node body;
+
+        FunctionDefinition(final Node typeSignature, final Node body) {
+            this.typeSignature = typeSignature;
+            this.body = body;
+        }
+
+        public Node getTypeSignature() {
+            return typeSignature;
+        }
+
+        public Node getBody() {
+            return body;
+        }
+
+        @Override
+        public String toString() {
+            return "fn" + typeSignature + " " + body;
+        }
+    }
+
     static class EofPrefixParser implements PrefixParser {
 
         @Override
@@ -300,6 +398,32 @@ public class CalculatorParser {
         @Override
         public Node parse(final Token token, final Parser parser, final Lexer lexer) {
             return new IdentifierNode(token.getChars());
+        }
+    }
+
+    static class FunctionDefinitionPrefixParser implements PrefixParser {
+
+        @Override
+        public Node parse(final Token token, final Parser parser, final Lexer lexer) {
+            if (lexer.peek().getType() != TokenType.LPAREN) {
+                throw new IllegalStateException("A function definition must begin with a type signature beginning with '('");
+            }
+            Node typeSignature = parser.parse(lexer, PrecedencePairs.PARENS.getRight());
+            Node body = parser.parse(lexer, 0);
+            return new FunctionDefinition(typeSignature, body);
+        }
+    }
+
+    static class LeftBracePrefixParser implements PrefixParser {
+
+        @Override
+        public Node parse(final Token token, final Parser parser, final Lexer lexer) {
+            Node list = parser.parse(lexer, PrecedencePairs.LBRACE.getRight());
+            Token tok = lexer.next();
+            if (!(tok.getType() == TokenType.RBRACE)) {
+                throw new IllegalStateException("Expected a right brace but got " + tok);
+            }
+            return new ExpressionList(list);
         }
     }
 
@@ -397,6 +521,24 @@ public class CalculatorParser {
                 throw new IllegalStateException("Must provide an expression for rhs argument to assignment");
             }
             return new AssignmentNode((ExpressionNode) node, (ExpressionNode) rhs);
+        }
+    }
+
+    static class CommaInfixParser implements InfixParser {
+
+        @Override
+        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
+            Node right = parser.parse(lexer, PrecedencePairs.COMMA.getRight());
+            return new CommaNode(node, right);
+        }
+    }
+
+    static class ArrowInfixParser implements InfixParser {
+
+        @Override
+        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
+            Node right = parser.parse(lexer, PrecedencePairs.ARROW.getRight());
+            return new ProducesNode(node, right);
         }
     }
 

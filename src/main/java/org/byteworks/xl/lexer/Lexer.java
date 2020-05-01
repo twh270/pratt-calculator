@@ -18,6 +18,11 @@ public class Lexer {
         final static Operator LPAREN = new Operator("(", TokenType.LPAREN);
         final static Operator RPAREN = new Operator(")", TokenType.RPAREN);
         final static Operator ASSIGNMENT = new Operator("=", TokenType.ASSIGNMENT);
+        final static Operator COMMA = new Operator(",", TokenType.COMMA);
+        final static Operator ARROW = new Operator("->", TokenType.ARROW);
+        final static Operator LBRACE = new Operator("{", TokenType.LBRACE);
+        final static Operator RBRACE = new Operator("}", TokenType.RBRACE);
+        final static Keyword FUNCTION_DEFINITION = new Keyword("fn", TokenType.FUNCTION_DEFINITION);
     }
 
     static class Number extends Token {
@@ -26,6 +31,10 @@ public class Lexer {
 
     static class Identifier extends Token {
         Identifier(String chars) { super(chars, TokenType.IDENTIFIER); }
+    }
+
+    static class Keyword extends Token {
+        Keyword(String chars, TokenType tokenType) { super(chars, tokenType); }
     }
 
     static class Operator extends Token {
@@ -46,7 +55,7 @@ public class Lexer {
         Unknown(String chars) { super(chars, TokenType.UNKNOWN); }
     }
 
-    private boolean isIdentifierCharacter(char ch) {
+    private boolean isIdentifierOrSymbolCharacter(char ch) {
         return Character.isAlphabetic(ch) || '_' == ch;
     }
 
@@ -75,13 +84,17 @@ public class Lexer {
                 pos++;
             }
             return new Number(sb.toString());
-        } else if (isIdentifierCharacter(ch)) {
+        } else if (isIdentifierOrSymbolCharacter(ch)) {
             StringBuilder sb = new StringBuilder().append(ch);
-            while (available() && isIdentifierCharacter(ch = peek_ch())) {
+            while (available() && isIdentifierOrSymbolCharacter(ch = peek_ch())) {
                 sb.append(ch);
                 pos++;
             }
-            return new Identifier(sb.toString());
+            String tokenString = sb.toString();
+            if (Tokens.FUNCTION_DEFINITION.getChars().equals(tokenString)) {
+                return Tokens.FUNCTION_DEFINITION;
+            }
+            return new Identifier(tokenString);
         }
         else if (ch == '+') {
             if (peek_ch() == '+') {
@@ -90,9 +103,13 @@ public class Lexer {
             }
             return Tokens.PLUS;
         } else if (ch == '-') {
-            if (peek_ch() == '-') {
+            char peek = peek_ch();
+            if (peek == '-') {
                 read_ch();
                 return Tokens.MINUSMINUS;
+            } else if (peek == '>') {
+                read_ch();
+                return Tokens.ARROW;
             }
             return Tokens.MINUS;
         } else if (ch == '*') {
@@ -105,6 +122,12 @@ public class Lexer {
             return Tokens.RPAREN;
         } else if (ch == '=') {
             return Tokens.ASSIGNMENT;
+        } else if (ch == ',') {
+            return Tokens.COMMA;
+        } else if (ch == '{') {
+            return Tokens.LBRACE;
+        } else if (ch == '}') {
+            return Tokens.RBRACE;
         }
         return new Unknown(String.valueOf(ch));
     }

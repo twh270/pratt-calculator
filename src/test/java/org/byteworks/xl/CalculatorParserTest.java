@@ -28,7 +28,8 @@ class CalculatorParserTest {
             "pre-increment, '++4', '++(4)'",
             "pre-decrement, '--4', '--(4)'",
             "post-increment, '4++', '++(4)'",
-            "post-decrement, '4--', '--(4)'"
+            "post-decrement, '4--', '--(4)'",
+            "function definition, 'f = fn(x, y -> z) { x + y }', '(= f fn(x, y -> z) { (+ x y) })'"
     })
     void parsesInput(String name, String input, String expected) {
         Lexer lexer = new Lexer(input);

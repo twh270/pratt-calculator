@@ -37,7 +37,11 @@ public class Parser {
         Node node = parseFirstNode(lexer, token);
         while (shouldParseInfix(lexer, precedence)) {
             token = lexer.next();
-            node = infixParsers.get(token.getType()).parse(node, this, lexer);
+            InfixParser infixParser = infixParsers.get(token.getType());
+            if (infixParser == null) {
+                throw new IllegalStateException("Got no infix parser for token " + token.toString());
+            }
+            node = infixParser.parse(node, this, lexer);
         }
         return node;
     }
