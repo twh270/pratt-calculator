@@ -80,14 +80,14 @@ class CalculatorInterpreterTest {
     void interpretsVariableAssignment() {
         String result = execute("x = 3 + 4");
         assertEquals("7: Number\n", result);
-        assertEquals("7: Number", testObj.getVariable("x").toString());
+        assertEquals("7: Number", testObj.interpreter.getVariable("x").toString());
     }
 
     @Test
     void interpretsVariableAssignmentAndEvaluation() {
         String result = execute("x = 3 + 4\nx * 2");
         assertEquals("7: Number\n14: Number\n", result);
-        assertEquals("7: Number", testObj.getVariable("x").toString());
+        assertEquals("7: Number", testObj.interpreter.getVariable("x").toString());
     }
 
     @Test
@@ -106,14 +106,14 @@ class CalculatorInterpreterTest {
     void interpretsPreIncrementVariable() {
         String result = execute("x = 3 + 4\n++x");
         assertEquals("7: Number\n8: Number\n", result);
-        assertEquals("8: Number", testObj.getVariable("x").toString());
+        assertEquals("8: Number", testObj.interpreter.getVariable("x").toString());
     }
 
     @Test
     void interpretsPreDecrementVariable() {
         String result = execute("x = 3 + 4\n--x");
         assertEquals("7: Number\n6: Number\n", result);
-        assertEquals("6: Number", testObj.getVariable("x").toString());
+        assertEquals("6: Number", testObj.interpreter.getVariable("x").toString());
     }
 
     @Test
@@ -126,7 +126,7 @@ class CalculatorInterpreterTest {
     void interpretsPostIncrementVariable() {
         String result = execute("x = 3 + 4\nx++");
         assertEquals("7: Number\n7: Number\n", result);
-        assertEquals("8: Number", testObj.getVariable("x").toString());
+        assertEquals("8: Number", testObj.interpreter.getVariable("x").toString());
     }
 
     @Test
@@ -139,21 +139,21 @@ class CalculatorInterpreterTest {
     void interpretsPostDecrementVariable() {
         String result = execute("x = 3 + 4\nx--");
         assertEquals("7: Number\n7: Number\n", result);
-        assertEquals("6: Number", testObj.getVariable("x").toString());
+        assertEquals("6: Number", testObj.interpreter.getVariable("x").toString());
     }
 
     @Test
     void interpretsPostIncrementPrecedence() {
         String result = execute("x = 3\n2+++x");
         assertEquals("3: Number\n5: Number\n", result);
-        assertEquals("3: Number", testObj.getVariable("x").toString());
+        assertEquals("3: Number", testObj.interpreter.getVariable("x").toString());
     }
 
     @Test
     void interpretsPostDecrementPrecedence() {
         String result = execute("x = 3\nx---2");
         assertEquals("3: Number\n1: Number\n", result);
-        assertEquals("2: Number", testObj.getVariable("x").toString());
+        assertEquals("2: Number", testObj.interpreter.getVariable("x").toString());
     }
 
 }

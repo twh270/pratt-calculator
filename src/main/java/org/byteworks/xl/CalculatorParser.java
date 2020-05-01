@@ -193,14 +193,14 @@ public class CalculatorParser {
         }
     }
 
-    static class IdentifierNode extends ExpressionNode {
+    public static class IdentifierNode extends ExpressionNode {
         private final String chars;
 
         IdentifierNode(final String chars) {
             this.chars = chars;
         }
 
-        String getChars() {
+        public String getChars() {
             return chars;
         }
 
