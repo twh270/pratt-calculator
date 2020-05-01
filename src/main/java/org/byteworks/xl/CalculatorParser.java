@@ -20,7 +20,7 @@ public class CalculatorParser {
     static {
         infixParsers.put(TokenType.PLUS, new PlusInfixParser());
         infixParsers.put(TokenType.MINUS, new MinusInfixParser());
-        infixParsers.put(TokenType.MULTIPLY, new MultInfixParser());
+        infixParsers.put(TokenType.MULTIPLY, new MultiplyInfixParser());
         infixParsers.put(TokenType.DIVIDE, new DivideInfixParser());
         infixParsers.put(TokenType.ASSIGNMENT, new AssignmentInfixParser());
         infixParsers.put(TokenType.PLUSPLUS, new PlusPlusInfixParser());
@@ -117,38 +117,38 @@ public class CalculatorParser {
         }
     }
 
-    static class NegativeSigned extends UnaryOpNode {
-        NegativeSigned(final ExpressionNode expr) {
+    static class NegativeSignedNode extends UnaryOpNode {
+        NegativeSignedNode(final ExpressionNode expr) {
             super(expr, "-");
         }
     }
 
-    static class PositiveSigned extends UnaryOpNode {
-        PositiveSigned(final ExpressionNode expr) {
+    static class PositiveSignedNode extends UnaryOpNode {
+        PositiveSignedNode(final ExpressionNode expr) {
             super(expr, "+");
         }
     }
 
-    static class PreIncrement extends UnaryOpNode {
-        PreIncrement(final ExpressionNode expr) {
+    static class PreIncrementNode extends UnaryOpNode {
+        PreIncrementNode(final ExpressionNode expr) {
             super(expr, "++");
         }
     }
 
-    static class PreDecrement extends UnaryOpNode {
-        PreDecrement(final ExpressionNode expr) {
+    static class PreDecrementNode extends UnaryOpNode {
+        PreDecrementNode(final ExpressionNode expr) {
             super(expr, "--");
         }
     }
 
-    static class PostIncrement extends UnaryOpNode {
-        PostIncrement(final ExpressionNode expr) {
+    static class PostIncrementNode extends UnaryOpNode {
+        PostIncrementNode(final ExpressionNode expr) {
             super(expr, "++");
         }
     }
 
-    static class PostDecrement extends UnaryOpNode {
-        PostDecrement(final ExpressionNode expr) {
+    static class PostDecrementNode extends UnaryOpNode {
+        PostDecrementNode(final ExpressionNode expr) {
             super(expr, "--");
         }
     }
@@ -164,11 +164,11 @@ public class CalculatorParser {
             this.op = op;
         }
 
-        Node getLhs() {
+        ExpressionNode getLhs() {
             return lhs;
         }
 
-        Node getRhs() {
+        ExpressionNode getRhs() {
             return rhs;
         }
 
@@ -190,8 +190,8 @@ public class CalculatorParser {
         }
     }
 
-    static class MultNode extends BinaryOpNode {
-        MultNode(final ExpressionNode lhs, final ExpressionNode rhs) {
+    static class MultiplyNode extends BinaryOpNode {
+        MultiplyNode(final ExpressionNode lhs, final ExpressionNode rhs) {
             super(lhs, rhs, "*");
         }
     }
@@ -271,10 +271,10 @@ public class CalculatorParser {
         }
     }
 
-    static class ExpressionList extends ExpressionNode {
+    static class ExpressionListNode extends ExpressionNode {
         private final Node list;
 
-        ExpressionList(final Node list) {
+        ExpressionListNode(final Node list) {
             this.list = list;
         }
 
@@ -288,11 +288,11 @@ public class CalculatorParser {
         }
     }
 
-    static class FunctionDefinition extends ExpressionNode {
+    static class FunctionDeclarationNode extends ExpressionNode {
         private final ProducesNode typeSignature;
-        private final Node body;
+        private final ExpressionNode body;
 
-        FunctionDefinition(final ProducesNode typeSignature, final Node body) {
+        FunctionDeclarationNode(final ProducesNode typeSignature, final ExpressionNode body) {
             this.typeSignature = typeSignature;
             this.body = body;
         }
@@ -301,7 +301,7 @@ public class CalculatorParser {
             return typeSignature;
         }
 
-        public Node getBody() {
+        public ExpressionNode getBody() {
             return body;
         }
 
@@ -311,11 +311,11 @@ public class CalculatorParser {
         }
     }
 
-    static class FunctionCall extends ExpressionNode {
+    static class FunctionCallNode extends ExpressionNode {
         private final String chars;
         private final Node arguments;
 
-        FunctionCall(final String chars, final Node arguments) {
+        FunctionCallNode(final String chars, final Node arguments) {
             this.chars = chars;
             this.arguments = arguments;
         }
@@ -334,11 +334,11 @@ public class CalculatorParser {
         }
     }
 
-    static class TypeExpression extends ExpressionNode {
+    static class TypeExpressionNode extends ExpressionNode {
         private final Node target;
         private final Node typeExpression;
 
-        TypeExpression(final Node target, final Node expression) {
+        TypeExpressionNode(final Node target, final Node expression) {
             this.target = target;
             typeExpression = expression;
         }
@@ -389,19 +389,7 @@ public class CalculatorParser {
             if (!(expr instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for negative-signed");
             }
-            return new NegativeSigned((ExpressionNode) expr);
-        }
-    }
-
-    static class MinusMinusPrefixParser implements PrefixParser {
-
-        @Override
-        public Node parse(final Token token, final Parser parser, final Lexer lexer) {
-            Node expr = parser.parse(lexer, PrecedencePairs.PRE_DECREMENT.getRight());
-            if (!(expr instanceof ExpressionNode)) {
-                throw new IllegalStateException("Must provide an expression for pre-decrement");
-            }
-            return new PreDecrement((ExpressionNode) expr);
+            return new NegativeSignedNode((ExpressionNode) expr);
         }
     }
 
@@ -413,7 +401,19 @@ public class CalculatorParser {
             if (!(expr instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for positive-signed");
             }
-            return new PositiveSigned((ExpressionNode) expr);
+            return new PositiveSignedNode((ExpressionNode) expr);
+        }
+    }
+
+    static class MinusMinusPrefixParser implements PrefixParser {
+
+        @Override
+        public Node parse(final Token token, final Parser parser, final Lexer lexer) {
+            Node expr = parser.parse(lexer, PrecedencePairs.PRE_DECREMENT.getRight());
+            if (!(expr instanceof ExpressionNode)) {
+                throw new IllegalStateException("Must provide an expression for pre-decrement");
+            }
+            return new PreDecrementNode((ExpressionNode) expr);
         }
     }
 
@@ -425,7 +425,7 @@ public class CalculatorParser {
             if (!(expr instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for pre-increment");
             }
-            return new PreIncrement((ExpressionNode) expr);
+            return new PreIncrementNode((ExpressionNode) expr);
         }
     }
 
@@ -448,7 +448,7 @@ public class CalculatorParser {
         public Node parse(final Token token, final Parser parser, final Lexer lexer) {
             if (lexer.peek().getType() == TokenType.LPAREN) {
                 Node arguments = parser.parse(lexer, PrecedencePairs.PARENS.getRight());
-                return new FunctionCall(token.getChars(), arguments);
+                return new FunctionCallNode(token.getChars(), arguments);
             }
             return new IdentifierNode(token.getChars());
         }
@@ -467,7 +467,10 @@ public class CalculatorParser {
             }
             ProducesNode typeSignature = (ProducesNode) node;
             Node body = parser.parse(lexer, 0);
-            return new FunctionDefinition(typeSignature, body);
+            if (!(body instanceof ExpressionNode)) {
+                throw new IllegalStateException("Function body must be an expression but was " + body);
+            }
+            return new FunctionDeclarationNode(typeSignature, (ExpressionNode) body);
         }
     }
 
@@ -480,7 +483,7 @@ public class CalculatorParser {
             if (!(tok.getType() == TokenType.RBRACE)) {
                 throw new IllegalStateException("Expected a right brace but got " + tok);
             }
-            return new ExpressionList(list);
+            return new ExpressionListNode(list);
         }
     }
 
@@ -506,7 +509,7 @@ public class CalculatorParser {
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for post-increment");
             }
-            return new PostIncrement((ExpressionNode) node);
+            return new PostIncrementNode((ExpressionNode) node);
         }
     }
 
@@ -532,11 +535,11 @@ public class CalculatorParser {
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for post-decrement");
             }
-            return new PostDecrement((ExpressionNode) node);
+            return new PostDecrementNode((ExpressionNode) node);
         }
     }
 
-    static class MultInfixParser implements InfixParser {
+    static class MultiplyInfixParser implements InfixParser {
 
         @Override
         public Node parse(final Node node, final Parser parser, final Lexer lexer) {
@@ -547,7 +550,7 @@ public class CalculatorParser {
             if (!(rhs instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for rhs argument to multiply");
             }
-            return new MultNode((ExpressionNode) node, (ExpressionNode) rhs);
+            return new MultiplyNode((ExpressionNode) node, (ExpressionNode) rhs);
         }
     }
 
@@ -604,7 +607,7 @@ public class CalculatorParser {
         @Override
         public Node parse(final Node node, final Parser parser, final Lexer lexer) {
             Node typeExpression = parser.parse(lexer, PrecedencePairs.COLON.getRight());
-            return new TypeExpression(node, typeExpression);
+            return new TypeExpressionNode(node, typeExpression);
         }
     }
 

@@ -5,6 +5,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
+/*
+    NOTE: keep this class DECOUPLED from language-specific classes
+ */
+
 public class Interpreter {
     private final Map<String, Value> heap = new HashMap<>();
     private final Map<String, Map<FunctionSignature, FunctionDefinition>> functions = new HashMap<>();
@@ -64,7 +68,4 @@ public class Interpreter {
         return ident;
     }
 
-    public void registerFunctionDefinition(final String name, final FunctionDefinition definition) {
-        registerFunctionDefinition(name, definition.getSignature().getParameterType(), definition.getSignature().getReturnType(), definition.getImpl());
-    }
 }

@@ -21,63 +21,64 @@ public class CalculatorInterpreter {
     private static final String TYPE_NUMBER = "Number";
     private static final String TYPE_TWO_NUMBERS = "TwoNumbers";
 
+    class InterpretedFunction implements FunctionImplementation<Stack<Value>, Value> {
+        private final CalculatorParser.ExpressionNode expression;
+
+        InterpretedFunction(final CalculatorParser.ExpressionNode expression) {
+            this.expression = expression;
+        }
+
+        @Override
+        public Value apply(final Stack<Value> values) {
+            return evaluateExpression(expression);
+        }
+    }
+
     final Interpreter interpreter = new Interpreter();
 
     private final FunctionImplementation<Stack<Value>, Value> numericAddition = stack -> {
-        Value left = stack.pop();
-        Value right = stack.pop();
-        checkOperandType(left, interpreter.getType(TYPE_NUMBER), "binary addition", "left");
-        checkOperandType(right, interpreter.getType(TYPE_NUMBER), "binary addition", "right");
-        Long leftValue = (Long) left.getValue();
-        Long rightValue = (Long) right.getValue();
+        Type number = interpreter.getType(TYPE_NUMBER);
+        Long leftValue = popValue(stack, number, "binary addition left operand expected %s but got %s");
+        Long rightValue = popValue(stack, number, "binary addition right operand expected %s but got %s");
         return new Value(leftValue + rightValue, interpreter.getType(TYPE_NUMBER));
     };
     private final FunctionImplementation<Stack<Value>, Value> numericSubtraction = stack -> {
-        Value left = stack.pop();
-        Value right = stack.pop();
-        checkOperandType(left, interpreter.getType(TYPE_NUMBER), "binary subtraction", "left");
-        checkOperandType(right, interpreter.getType(TYPE_NUMBER), "binary subtraction", "right");
-        Long leftValue = (Long) left.getValue();
-        Long rightValue = (Long) right.getValue();
+        Type number = interpreter.getType(TYPE_NUMBER);
+        Long leftValue = popValue(stack, number, "binary subtraction left operand expected %s but got %s");
+        Long rightValue = popValue(stack, number, "binary subtraction right operand expected %s but got %s");
         return new Value(leftValue - rightValue, interpreter.getType(TYPE_NUMBER));
     };
     private final FunctionImplementation<Stack<Value>, Value> numericMultiplication = stack -> {
-        Value left = stack.pop();
-        Value right = stack.pop();
-        checkOperandType(left, interpreter.getType(TYPE_NUMBER), "binary multiplication", "left");
-        checkOperandType(right, interpreter.getType(TYPE_NUMBER), "binary multiplication", "right");
-        Long leftValue = (Long) left.getValue();
-        Long rightValue = (Long) right.getValue();
+        Type number = interpreter.getType(TYPE_NUMBER);
+        Long leftValue = popValue(stack, number, "binary multiplication left operand expected %s but got %s");
+        Long rightValue = popValue(stack, number, "binary multiplication right operand expected %s but got %s");
         return new Value(leftValue * rightValue, interpreter.getType(TYPE_NUMBER));
     };
     private final FunctionImplementation<Stack<Value>, Value> numericDivision = stack -> {
-        Value left = stack.pop();
-        Value right = stack.pop();
-        checkOperandType(left, interpreter.getType(TYPE_NUMBER), "binary division", "left");
-        checkOperandType(right, interpreter.getType(TYPE_NUMBER), "binary division", "right");
-        Long leftValue = (Long) left.getValue();
-        Long rightValue = (Long) right.getValue();
+        Type number = interpreter.getType(TYPE_NUMBER);
+        Long leftValue = popValue(stack, number, "binary division left operand expected %s but got %s");
+        Long rightValue = popValue(stack, number, "binary division right operand expected %s but got %s");
         return new Value(leftValue / rightValue, interpreter.getType(TYPE_NUMBER));
     };
     private final FunctionImplementation<Stack<Value>, Value> preIncrement = stack -> {
-        Value operand = stack.pop();
-        checkOperandType(operand, interpreter.getType(TYPE_NUMBER), "pre-increment", "operand");
-        return new Value((Long) operand.getValue() + 1, interpreter.getType(TYPE_NUMBER));
+        Type number = interpreter.getType(TYPE_NUMBER);
+        Long operand = popValue(stack, number, "pre-increment operand expected %s but got %s");
+        return new Value(operand + 1, interpreter.getType(TYPE_NUMBER));
     };
     private final FunctionImplementation<Stack<Value>, Value> preDecrement = stack -> {
-        Value operand = stack.pop();
-        checkOperandType(operand, interpreter.getType(TYPE_NUMBER), "pre-decrement", "operand");
-        return new Value((Long) operand.getValue() - 1, interpreter.getType(TYPE_NUMBER));
+        Type number = interpreter.getType(TYPE_NUMBER);
+        Long operand = popValue(stack, number, "pre-decrement operand expected %s but got %s");
+        return new Value(operand - 1, interpreter.getType(TYPE_NUMBER));
     };
     private final FunctionImplementation<Stack<Value>, Value> postIncrement = stack -> {
-        Value operand = stack.pop();
-        checkOperandType(operand, interpreter.getType(TYPE_NUMBER), "post-increment", "operand");
-        return new Value((Long) operand.getValue() + 1, interpreter.getType(TYPE_NUMBER));
+        Type number = interpreter.getType(TYPE_NUMBER);
+        Long operand = popValue(stack, number, "post-increment operand expected %s but got %s");
+        return new Value(operand + 1, interpreter.getType(TYPE_NUMBER));
     };
     private final FunctionImplementation<Stack<Value>, Value> postDecrement = stack -> {
-        Value operand = stack.pop();
-        checkOperandType(operand, interpreter.getType(TYPE_NUMBER), "post-decrement", "operand");
-        return new Value((Long) operand.getValue() - 1, interpreter.getType(TYPE_NUMBER));
+        Type number = interpreter.getType(TYPE_NUMBER);
+        Long operand = popValue(stack, number, "post-decrement operand expected %s but got %s");
+        return new Value(operand - 1, interpreter.getType(TYPE_NUMBER));
     };
 
     public CalculatorInterpreter() {
@@ -99,82 +100,53 @@ public class CalculatorInterpreter {
         for (Node node : nodes) {
             if (node instanceof CalculatorParser.ExpressionNode) {
                 ps.println(evaluateExpression((CalculatorParser.ExpressionNode) node));
+            } else {
+                ps.println(node);
             }
         }
     }
 
     private Value evaluateExpression(final CalculatorParser.ExpressionNode expression) {
         if (expression instanceof CalculatorParser.LiteralNode) {
-            return literalExpression(expression);
+            return literalExpression((CalculatorParser.LiteralNode) expression);
         } else if (expression instanceof CalculatorParser.IdentifierNode) {
             return identifierExpression((CalculatorParser.IdentifierNode) expression);
         } else if (expression instanceof CalculatorParser.UnaryOpNode) {
-            return unaryOperatorExpression(expression);
+            return unaryOperatorExpression((CalculatorParser.UnaryOpNode) expression);
         } else if (expression instanceof CalculatorParser.BinaryOpNode) {
-            return binaryOperatorExpression(expression);
-        } else if (expression instanceof CalculatorParser.FunctionDefinition) {
-            return functionDefinition((CalculatorParser.FunctionDefinition) expression);
+            return binaryOperatorExpression((CalculatorParser.BinaryOpNode) expression);
+        } else if (expression instanceof CalculatorParser.FunctionDeclarationNode) {
+            return functionDeclaration((CalculatorParser.FunctionDeclarationNode) expression);
         }
         throw new IllegalStateException("Don't know how to evaluate expression " + expression);
     }
 
-    private Value functionDefinition(CalculatorParser.FunctionDefinition functionDefinition) {
+    private Value functionDeclaration(CalculatorParser.FunctionDeclarationNode functionDefinition) {
         CalculatorParser.ProducesNode signature = functionDefinition.getTypeSignature();
         Node left = signature.getLeft();
-        List<CalculatorParser.TypeExpression> paramList = Collections.emptyList();
+        List<CalculatorParser.TypeExpressionNode> paramList = Collections.emptyList();
         if (left instanceof CalculatorParser.CommaNode) {
             CalculatorParser.CommaNode params = (CalculatorParser.CommaNode) left;
-            paramList = List.of((CalculatorParser.TypeExpression)params.getLeft(), (CalculatorParser.TypeExpression)params.getRight());
+            paramList = List.of((CalculatorParser.TypeExpressionNode)params.getLeft(), (CalculatorParser.TypeExpressionNode)params.getRight());
         }
         // TODO handle a single parameter
         List<Type> paramTypes = paramList.stream()
-                .map(CalculatorParser.TypeExpression::getTypeExpression)
+                .map(CalculatorParser.TypeExpressionNode::getTypeExpression)
                 .map(it -> ((CalculatorParser.IdentifierNode) it).getChars())
                 .map(interpreter::getType)
                 .collect(Collectors.toList());
         Type parameterType = new TypeList(paramTypes);
+        // TODO handle compound return type
         Type returnType = interpreter.getType(((CalculatorParser.IdentifierNode) signature.getRight()).getChars());
         FunctionSignature functionSignature = new FunctionSignature(parameterType, returnType);
         return new Value(new Function(new FunctionSignature(parameterType, returnType), new InterpretedFunction(functionDefinition.getBody())), functionSignature);
     }
 
-    class InterpretedFunction implements FunctionImplementation<Stack<Value>, Value> {
-        private final Node expression;
-
-        InterpretedFunction(final Node expression) {
-            this.expression = expression;
-        }
-
-        @Override
-        public Value apply(final Stack<Value> values) {
-            return evaluateExpression((CalculatorParser.ExpressionNode) expression);
-        }
-    }
-
-    private Value binaryOperatorExpression(final CalculatorParser.ExpressionNode expression) {
-        CalculatorParser.BinaryOpNode binaryOp = (CalculatorParser.BinaryOpNode) expression;
-        if (!(binaryOp.getLhs() instanceof CalculatorParser.ExpressionNode)) {
-            throw new IllegalStateException("Expected an expression for lhs of " + expression + " but got " + binaryOp.getLhs().getClass().getSimpleName() + " instead");
-        }
-        if (!(binaryOp.getRhs() instanceof CalculatorParser.ExpressionNode)) {
-            throw new IllegalStateException("Expected an expression for rhs of " + expression + " but got " + binaryOp.getLhs().getClass().getSimpleName() + " instead");
-        }
-        CalculatorParser.ExpressionNode lhs = (CalculatorParser.ExpressionNode) binaryOp.getLhs();
-        CalculatorParser.ExpressionNode rhs = (CalculatorParser.ExpressionNode) binaryOp.getRhs();
+    private Value binaryOperatorExpression(final CalculatorParser.BinaryOpNode binaryOp) {
+        CalculatorParser.ExpressionNode lhs = binaryOp.getLhs();
+        CalculatorParser.ExpressionNode rhs = binaryOp.getRhs();
         if (binaryOp instanceof CalculatorParser.AssignmentNode) {
-            if (!(binaryOp.getLhs() instanceof CalculatorParser.IdentifierNode)) {
-                throw new IllegalStateException("The left hand side of an assignment must be a variable in expression " + binaryOp);
-            }
-            Value value = evaluateExpression(rhs);
-            CalculatorParser.IdentifierNode ident = (CalculatorParser.IdentifierNode) binaryOp.getLhs();
-            if (value.getValue() instanceof Function) {
-                Function function = (Function) value.getValue();
-                String functionName = ((CalculatorParser.IdentifierNode)lhs).getChars();
-                FunctionSignature signature = function.getSignature();
-                value = new Value(interpreter.registerFunctionDefinition(functionName, signature.getParameterType(), signature.getReturnType(), function.getImpl()), function.getSignature());
-            }
-            interpreter.assignVariableValue(ident.getChars(), value);
-            return value;
+            return callAssignment(binaryOp, (CalculatorParser.IdentifierNode) lhs, rhs);
         }
         Value left = evaluateExpression(lhs);
         Value right = evaluateExpression(rhs);
@@ -182,13 +154,28 @@ public class CalculatorInterpreter {
             return callBinaryNumericFunction(left, right, "add");
         } else if (binaryOp instanceof CalculatorParser.MinusNode) {
             return callBinaryNumericFunction(left, right, "subtract");
-        } else if (binaryOp instanceof CalculatorParser.MultNode) {
+        } else if (binaryOp instanceof CalculatorParser.MultiplyNode) {
             return callBinaryNumericFunction(left, right, "multiply");
         } else if (binaryOp instanceof CalculatorParser.DivideNode) {
             return callBinaryNumericFunction(left, right, "divide");
         } else {
-            throw new IllegalStateException("Don't know \nhow to evaluate binary operator " + expression.getClass().getSimpleName() + " in expression " + expression);
+            throw new IllegalStateException("Don't know \nhow to evaluate binary operator " + binaryOp.getClass().getSimpleName() + " in expression " + binaryOp);
         }
+    }
+
+    private Value callAssignment(final CalculatorParser.BinaryOpNode binaryOp, final CalculatorParser.IdentifierNode identifierNode, final CalculatorParser.ExpressionNode rhs) {
+        if (!(binaryOp.getLhs() instanceof CalculatorParser.IdentifierNode)) {
+            throw new IllegalStateException("The left hand side of an assignment must be an identifier in expression " + binaryOp);
+        }
+        Value value = evaluateExpression(rhs);
+        if (value.getValue() instanceof Function) {
+            Function function = (Function) value.getValue();
+            String functionName = identifierNode.getChars();
+            FunctionSignature signature = function.getSignature();
+            value = new Value(interpreter.registerFunctionDefinition(functionName, signature.getParameterType(), signature.getReturnType(), function.getImpl()), function.getSignature());
+        }
+        interpreter.assignVariableValue(identifierNode.getChars(), value);
+        return value;
     }
 
     private Value callBinaryNumericFunction(final Value left, final Value right, final String name) {
@@ -212,40 +199,39 @@ public class CalculatorInterpreter {
         }
     }
 
-    private Value unaryOperatorExpression(final CalculatorParser.ExpressionNode expression) {
-        CalculatorParser.UnaryOpNode unaryOp = (CalculatorParser.UnaryOpNode) expression;
+    private Value unaryOperatorExpression(final CalculatorParser.UnaryOpNode unaryOp) {
         Value operand = evaluateExpression(unaryOp.getExpr());
-        checkType(operand.getType(), interpreter.getType(TYPE_NUMBER), "Unary operator expected a %s but got %s in expression " + expression);
-        if (unaryOp instanceof CalculatorParser.NegativeSigned) {
+        checkType(operand.getType(), interpreter.getType(TYPE_NUMBER), "Unary operator expected a %s but got %s in expression " + unaryOp);
+        if (unaryOp instanceof CalculatorParser.NegativeSignedNode) {
             return new Value(-((Long) operand.getValue()), interpreter.getType(TYPE_NUMBER));
-        } else if (unaryOp instanceof CalculatorParser.PositiveSigned) {
+        } else if (unaryOp instanceof CalculatorParser.PositiveSignedNode) {
             return new Value(operand.getValue(), interpreter.getType(TYPE_NUMBER));
-        } else if (unaryOp instanceof CalculatorParser.PreIncrement) {
+        } else if (unaryOp instanceof CalculatorParser.PreIncrementNode) {
             Value result = callUnaryNumericFunction(operand, "preincrement");
             if (unaryOp.getExpr() instanceof CalculatorParser.IdentifierNode) {
                 interpreter.assignVariableValue(((CalculatorParser.IdentifierNode) unaryOp.getExpr()).getChars(), result);
             }
             return result;
-        } else if (unaryOp instanceof CalculatorParser.PreDecrement) {
+        } else if (unaryOp instanceof CalculatorParser.PreDecrementNode) {
             Value result = callUnaryNumericFunction(operand, "predecrement");
             if (unaryOp.getExpr() instanceof CalculatorParser.IdentifierNode) {
                 interpreter.assignVariableValue(((CalculatorParser.IdentifierNode) unaryOp.getExpr()).getChars(), result);
             }
             return result;
-        } else if (unaryOp instanceof CalculatorParser.PostIncrement) {
+        } else if (unaryOp instanceof CalculatorParser.PostIncrementNode) {
             Value result = callUnaryNumericFunction(operand, "postincrement");
             if (unaryOp.getExpr() instanceof CalculatorParser.IdentifierNode) {
                 interpreter.assignVariableValue(((CalculatorParser.IdentifierNode) unaryOp.getExpr()).getChars(), result);
             }
             return operand;
-        } else if (unaryOp instanceof CalculatorParser.PostDecrement) {
+        } else if (unaryOp instanceof CalculatorParser.PostDecrementNode) {
             Value result = callUnaryNumericFunction(operand, "postdecrement");
             if (unaryOp.getExpr() instanceof CalculatorParser.IdentifierNode) {
                 interpreter.assignVariableValue(((CalculatorParser.IdentifierNode) unaryOp.getExpr()).getChars(), result);
             }
             return operand;
         } else {
-            throw new IllegalStateException("Unknown unary operator " + unaryOp + " in expression " + expression);
+            throw new IllegalStateException("Unknown unary operator " + unaryOp + " in expression " + unaryOp);
         }
     }
 
@@ -254,19 +240,28 @@ public class CalculatorInterpreter {
         return interpreter.identifier(identifierName);
     }
 
-    private Value literalExpression(final CalculatorParser.ExpressionNode expression) {
-        CalculatorParser.LiteralNode literal = (CalculatorParser.LiteralNode) expression;
+    private Value literalExpression(final CalculatorParser.LiteralNode literal) {
         try {
             Long longValue = Long.parseLong(literal.getValue());
             return new Value(longValue, interpreter.getType(TYPE_NUMBER));
         } catch (NumberFormatException e) {
-            throw new IllegalStateException("Unable to parse literal " + literal.getValue() + " in expression " + expression);
+            throw new IllegalStateException("Unable to parse literal " + literal.getValue() + " in expression " + literal);
         }
     }
 
-    private void checkOperandType(Value value, Type expected, String operatorName, String operandName) {
-        if (value.getType() != expected) {
-            throw new IllegalStateException("Operator " + operatorName + " expecting a number for " + operandName + " operand but got a " + value.getType() + " for value " + value.getValue());
-        }
+    @SuppressWarnings("unchecked")
+    private <T> T popValue(Stack<Value> stack, Type expectedType, String error) {
+        Value value = pop(stack, expectedType, error);
+        return (T) value.getValue();
     }
+
+    private Value pop(Stack<Value> stack, Type expectedType, String error) {
+        Value value = stack.pop();
+        Type actualType = value.getType();
+        if (actualType != expectedType) {
+            throw new IllegalStateException(String.format(error, expectedType, actualType));
+        }
+        return value;
+    }
+
 }

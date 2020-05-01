@@ -13,7 +13,7 @@ public class Lexer {
         final static Operator PLUSPLUS = new Operator("++", TokenType.PLUSPLUS);
         final static Operator MINUS = new Operator("-", TokenType.MINUS);
         final static Operator MINUSMINUS = new Operator("--", TokenType.MINUSMINUS);
-        final static Operator MULT = new Operator("*", TokenType.MULTIPLY);
+        final static Operator MULTIPLY = new Operator("*", TokenType.MULTIPLY);
         final static Operator DIVIDE = new Operator("/", TokenType.DIVIDE);
         final static Operator LPAREN = new Operator("(", TokenType.LPAREN);
         final static Operator RPAREN = new Operator(")", TokenType.RPAREN);
@@ -114,7 +114,7 @@ public class Lexer {
             }
             return Tokens.MINUS;
         } else if (ch == '*') {
-            return Tokens.MULT;
+            return Tokens.MULTIPLY;
         } else if (ch == '/') {
             return Tokens.DIVIDE;
         } else if (ch == '(') {
