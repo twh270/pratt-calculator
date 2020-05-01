@@ -3,7 +3,7 @@ package org.byteworks.xl.lexer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class LexerTest {
+class LexerTest {
     @Test
     void parsesPaddedNumber() {
         Lexer testObj = new Lexer("  23  ");

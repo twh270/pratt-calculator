@@ -101,7 +101,7 @@ public class CalculatorInterpreter {
         registerFunction("postdecrement", number, number, postDecrement);
     }
 
-    private void registerFunction(String name, Type parameterType, Type returnType, FunctionImplementation impl) {
+    private void registerFunction(String name, Type parameterType, Type returnType, FunctionImplementation<Stack<Value>, Value> impl) {
         FunctionDefinition def = new FunctionDefinition(name, parameterType, returnType, impl);
         functions.put(def.getSignature(), def);
     }
@@ -117,7 +117,7 @@ public class CalculatorInterpreter {
     public class SimpleType implements Type {
         private final String name;
 
-        public SimpleType(final String name) {
+        SimpleType(final String name) {
             this.name = name;
         }
 
@@ -153,7 +153,7 @@ public class CalculatorInterpreter {
         private final List<Type> types;
         private final String name;
 
-        public TypeList(final List<Type> types) {
+        TypeList(final List<Type> types) {
             this.types = new ArrayList<>(types);
             name = types.stream().map(Type::name).collect(Collectors.joining(", "));
         }
@@ -223,38 +223,35 @@ public class CalculatorInterpreter {
         private final FunctionSignature signature;
         private final FunctionImplementation<Stack<Value>, Value> impl;
 
-        FunctionDefinition(final String name, final Type parameterType, final Type returnType, final FunctionImplementation impl) {
+        FunctionDefinition(final String name, final Type parameterType, final Type returnType, final FunctionImplementation<Stack<Value>, Value> impl) {
             this.signature = new FunctionSignature(name, parameterType, returnType);
             this.impl = impl;
         }
 
-        Value execute(Stack stack) {
+        Value execute(Stack<Value> stack) {
             return impl.apply(stack);
         }
 
-        public FunctionSignature getSignature() {
+        FunctionSignature getSignature() {
             return signature;
         }
 
-        public FunctionImplementation<Stack<Value>, Value> getImpl() {
-            return impl;
-        }
     }
 
     public static class Value {
         private final Object value;
         private final Type type;
 
-        public Value(final Object value, final Type type) {
+        Value(final Object value, final Type type) {
             this.value = value;
             this.type = type;
         }
 
-        public Object getValue() {
+        Object getValue() {
             return value;
         }
 
-        public Type getType() {
+        Type getType() {
             return type;
         }
 

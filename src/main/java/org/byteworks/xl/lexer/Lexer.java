@@ -1,8 +1,5 @@
 package org.byteworks.xl.lexer;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class Lexer {
     private final String input;
     private int pos;
@@ -11,36 +8,11 @@ public class Lexer {
 
     public enum TokenType {
         UNKNOWN, PLUS, PLUSPLUS, MINUS, MINUSMINUS, MULTIPLY, DIVIDE, LPAREN, RPAREN, EOF, EOL, NUMBER, IDENTIFIER,
-        ASSIGNMENT;
-
-        private static Map<String, TokenType> charsToToken = new HashMap<>();
-        static {
-            charsToToken.put("+", PLUS);
-            charsToToken.put("++", PLUSPLUS);
-            charsToToken.put("--", MINUSMINUS);
-            charsToToken.put("*", MULTIPLY);
-            charsToToken.put("/", DIVIDE);
-            charsToToken.put("(", LPAREN);
-            charsToToken.put(")", RPAREN);
-            charsToToken.put("=", ASSIGNMENT);
-        }
-        static TokenType from(String chars) {
-            TokenType type = charsToToken.get(chars);
-            if (type == null) {
-                throw new IllegalArgumentException("Unknown characters '" + chars +"' used to look up token type");
-            }
-            return type;
-        }
+        ASSIGNMENT
     }
 
-    public static class Token {
-        private final String chars;
-        private final TokenType type;
-        Token(String chars, TokenType type) { this.chars = chars; this.type = type; }
-        public String getChars() { return chars; }
-        public TokenType getType() { return type; }
-
-        public final static Eof EOF = new Eof();
+    private static class Tokens {
+        final static Eof EOF = new Eof();
         final static Eol EOL = new Eol();
         final static Operator PLUS = new Operator("+", TokenType.PLUS);
         final static Operator PLUSPLUS = new Operator("++", TokenType.PLUSPLUS);
@@ -51,6 +23,14 @@ public class Lexer {
         final static Operator LPAREN = new Operator("(", TokenType.LPAREN);
         final static Operator RPAREN = new Operator(")", TokenType.RPAREN);
         final static Operator ASSIGNMENT = new Operator("=", TokenType.ASSIGNMENT);
+    }
+
+    public static class Token {
+        private final String chars;
+        private final TokenType type;
+        Token(String chars, TokenType type) { this.chars = chars; this.type = type; }
+        public String getChars() { return chars; }
+        public TokenType getType() { return type; }
 
         @Override
         public String toString() {
@@ -58,29 +38,29 @@ public class Lexer {
         }
     }
 
-    public static class Number extends Token {
+    static class Number extends Token {
         Number(String chars) { super(chars, TokenType.NUMBER); }
     }
 
-    public static class Identifier extends Token {
+    static class Identifier extends Token {
         Identifier(String chars) { super(chars, TokenType.IDENTIFIER); }
     }
 
-    public static class Operator extends Token {
+    static class Operator extends Token {
         Operator(String chars, TokenType tokenType) { super(chars, tokenType); }
     }
 
-    public static class Eof extends Token {
+    static class Eof extends Token {
         Eof() {
             super("", TokenType.EOF);
         }
     }
 
-    public static class Eol extends Token {
+    static class Eol extends Token {
         Eol() { super("", TokenType.EOL); }
     }
 
-    public static class Unknown extends Token {
+    static class Unknown extends Token {
         Unknown(String chars) { super(chars, TokenType.UNKNOWN); }
     }
 
@@ -88,19 +68,23 @@ public class Lexer {
         return Character.isAlphabetic(ch) || '_' == ch;
     }
 
+    public boolean hasMoreTokens() {
+        return !(peek() == Tokens.EOF);
+    }
+
     public Token next() {
         if (!available()) {
-            return Token.EOF;
+            return Tokens.EOF;
         }
         char ch = read_ch();
         while (Character.isWhitespace(ch) && available()) {
             if (ch == '\n') {
-                return Token.EOL;
+                return Tokens.EOL;
             }
             ch = read_ch();
         }
         if (Character.isWhitespace(ch) && !available()) {
-            return Token.EOF;
+            return Tokens.EOF;
         }
         if (Character.isDigit(ch)) {
             StringBuilder sb = new StringBuilder().append(ch);
@@ -120,25 +104,25 @@ public class Lexer {
         else if (ch == '+') {
             if (peek_ch() == '+') {
                 read_ch();
-                return Token.PLUSPLUS;
+                return Tokens.PLUSPLUS;
             }
-            return Token.PLUS;
+            return Tokens.PLUS;
         } else if (ch == '-') {
             if (peek_ch() == '-') {
                 read_ch();
-                return Token.MINUSMINUS;
+                return Tokens.MINUSMINUS;
             }
-            return Token.MINUS;
+            return Tokens.MINUS;
         } else if (ch == '*') {
-            return Token.MULT;
+            return Tokens.MULT;
         } else if (ch == '/') {
-            return Token.DIVIDE;
+            return Tokens.DIVIDE;
         } else if (ch == '(') {
-            return Token.LPAREN;
+            return Tokens.LPAREN;
         } else if (ch == ')') {
-            return Token.RPAREN;
+            return Tokens.RPAREN;
         } else if (ch == '=') {
-            return Token.ASSIGNMENT;
+            return Tokens.ASSIGNMENT;
         }
         return new Unknown(String.valueOf(ch));
     }

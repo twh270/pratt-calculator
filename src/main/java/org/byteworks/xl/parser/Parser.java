@@ -42,7 +42,7 @@ public class Parser {
 
     public List<Node> parse(Lexer lexer) {
         List<Node> nodes = new ArrayList<>();
-        while(lexer.peek() != Lexer.Token.EOF) {
+        while(lexer.hasMoreTokens()) {
             nodes.add(parse(lexer, 0));
             if (nodes.size() > 3) {
                 throw new IllegalStateException("We don't want many lines yet -- blow up to avoid having to kill the VM");
@@ -56,7 +56,7 @@ public class Parser {
         Node node = parseFirstNode(lexer, token);
         while (shouldParseInfix(lexer, precedence)) {
             token = lexer.next();
-            node = infixParsers.get(token.getType()).parse(node, token, this, lexer);
+            node = infixParsers.get(token.getType()).parse(node, this, lexer);
         }
         return node;
     }
@@ -71,7 +71,7 @@ public class Parser {
     }
 
     public interface InfixParser {
-        Node parse(Node node, Lexer.Token token, Parser parser, Lexer lexer);
+        Node parse(Node node, Parser parser, Lexer lexer);
     }
 
     public interface PrefixParser {

@@ -14,6 +14,9 @@ public class REPL {
         Scanner scanner = new Scanner(System.in);
         while(true) {
             String input = scanner.nextLine();
+            if("quit".equalsIgnoreCase(input)) {
+                return;
+            }
             List<Parser.Node> nodes = parser.parse(new Lexer(input));
             interpreter.exec(nodes, System.out);
         }
