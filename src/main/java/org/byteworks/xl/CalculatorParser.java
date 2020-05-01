@@ -1,7 +1,10 @@
-package org.byteworks.parse.pratt;
+package org.byteworks.xl;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import org.byteworks.xl.lexer.Lexer;
+import org.byteworks.xl.parser.Parser;
 
 public class CalculatorParser {
     private static final Map<Lexer.TokenType, Parser.PrefixParser> prefixParsers = new HashMap<>();

@@ -1,7 +1,10 @@
-package org.byteworks.parse.pratt;
+package org.byteworks.xl;
 
 import java.util.List;
 import java.util.Scanner;
+
+import org.byteworks.xl.lexer.Lexer;
+import org.byteworks.xl.parser.Parser;
 
 public class REPL {
     public static void main(String[] args) {

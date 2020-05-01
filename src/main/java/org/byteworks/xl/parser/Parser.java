@@ -1,8 +1,10 @@
-package org.byteworks.parse.pratt;
+package org.byteworks.xl.parser;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import org.byteworks.xl.lexer.Lexer;
 
 public class Parser {
 
@@ -16,7 +18,7 @@ public class Parser {
         this.tokenPrecedence = tokenPrecedence;
     }
 
-    static class Pair<L, R> {
+    public static class Pair<L, R> {
         private final L left;
         private final R right;
 
@@ -68,11 +70,11 @@ public class Parser {
         return precedencePair.getLeft() >= precedence;
     }
 
-    interface InfixParser {
+    public interface InfixParser {
         Node parse(Node node, Lexer.Token token, Parser parser, Lexer lexer);
     }
 
-    interface PrefixParser {
+    public interface PrefixParser {
         Node parse(Lexer.Token token, Parser parser, Lexer lexer);
     }
 

@@ -1,4 +1,4 @@
-package org.byteworks.parse.pratt;
+package org.byteworks.xl.lexer;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

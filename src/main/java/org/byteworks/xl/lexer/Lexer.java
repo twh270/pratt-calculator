@@ -1,4 +1,4 @@
-package org.byteworks.parse.pratt;
+package org.byteworks.xl.lexer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -36,11 +36,11 @@ public class Lexer {
     public static class Token {
         private final String chars;
         private final TokenType type;
-        public Token(String chars, TokenType type) { this.chars = chars; this.type = type; }
+        Token(String chars, TokenType type) { this.chars = chars; this.type = type; }
         public String getChars() { return chars; }
         public TokenType getType() { return type; }
 
-        final static Eof EOF = new Eof();
+        public final static Eof EOF = new Eof();
         final static Eol EOL = new Eol();
         final static Operator PLUS = new Operator("+", TokenType.PLUS);
         final static Operator PLUSPLUS = new Operator("++", TokenType.PLUSPLUS);
