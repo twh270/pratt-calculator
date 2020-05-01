@@ -7,12 +7,13 @@ import java.io.PrintStream;
 import java.util.List;
 
 import org.byteworks.xl.lexer.Lexer;
+import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.Parser;
 import org.junit.jupiter.api.Test;
 
 class CalculatorInterpreterTest {
 
-    private List<Parser.Node> nodes;
+    private List<Node> nodes;
     private PrintStream ps;
     private CalculatorInterpreter testObj;
     private ByteArrayOutputStream baos;

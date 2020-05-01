@@ -4,60 +4,66 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.byteworks.xl.lexer.Lexer;
+import org.byteworks.xl.lexer.Token;
+import org.byteworks.xl.lexer.TokenType;
+import org.byteworks.xl.parser.InfixParser;
+import org.byteworks.xl.parser.Node;
+import org.byteworks.xl.parser.Pair;
 import org.byteworks.xl.parser.Parser;
+import org.byteworks.xl.parser.PrefixParser;
 
 public class CalculatorParser {
-    private static final Map<Lexer.TokenType, Parser.PrefixParser> prefixParsers = new HashMap<>();
-    private static final Map<Lexer.TokenType, Parser.InfixParser> infixParsers = new HashMap<>();
-    private static final Map<Lexer.TokenType, Parser.Pair<Integer, Integer>> tokenPrecedence = new HashMap<>();
+    private static final Map<TokenType, PrefixParser> prefixParsers = new HashMap<>();
+    private static final Map<TokenType, InfixParser> infixParsers = new HashMap<>();
+    private static final Map<TokenType, Pair<Integer, Integer>> tokenPrecedence = new HashMap<>();
 
     static {
-        infixParsers.put(Lexer.TokenType.PLUS, new PlusInfixParser());
-        infixParsers.put(Lexer.TokenType.MINUS, new MinusInfixParser());
-        infixParsers.put(Lexer.TokenType.MULTIPLY, new MultInfixParser());
-        infixParsers.put(Lexer.TokenType.DIVIDE, new DivideInfixParser());
-        infixParsers.put(Lexer.TokenType.ASSIGNMENT, new AssignmentInfixParser());
-        infixParsers.put(Lexer.TokenType.PLUSPLUS, new PlusPlusInfixParser());
-        infixParsers.put(Lexer.TokenType.MINUSMINUS, new MinusMinusInfixParser());
-        prefixParsers.put(Lexer.TokenType.EOF, new EofPrefixParser());
-        prefixParsers.put(Lexer.TokenType.NUMBER, new NumberPrefixParser());
-        prefixParsers.put(Lexer.TokenType.MINUS, new MinusPrefixParser());
-        prefixParsers.put(Lexer.TokenType.PLUS, new PlusPrefixParser());
-        prefixParsers.put(Lexer.TokenType.LPAREN, new LParenPrefixParser());
-        prefixParsers.put(Lexer.TokenType.IDENTIFIER, new IdentifierPrefixParser());
-        prefixParsers.put(Lexer.TokenType.EOL, new EndOfLinePrefixParser());
-        prefixParsers.put(Lexer.TokenType.PLUSPLUS, new PlusPlusPrefixParser());
-        prefixParsers.put(Lexer.TokenType.MINUSMINUS, new MinusMinusPrefixParser());
-        tokenPrecedence.put(Lexer.TokenType.PLUS, PrecedencePairs.PLUS_MINUS);
-        tokenPrecedence.put(Lexer.TokenType.MINUS, PrecedencePairs.PLUS_MINUS);
-        tokenPrecedence.put(Lexer.TokenType.MULTIPLY, PrecedencePairs.MULT_DIV);
-        tokenPrecedence.put(Lexer.TokenType.DIVIDE, PrecedencePairs.MULT_DIV);
-        tokenPrecedence.put(Lexer.TokenType.EOF, PrecedencePairs.EOF);
-        tokenPrecedence.put(Lexer.TokenType.EOL, PrecedencePairs.EOL);
-        tokenPrecedence.put(Lexer.TokenType.RPAREN, PrecedencePairs.PARENS);
-        tokenPrecedence.put(Lexer.TokenType.ASSIGNMENT, PrecedencePairs.ASSIGNMENT);
-        tokenPrecedence.put(Lexer.TokenType.PLUSPLUS, PrecedencePairs.PRE_POST_INCREMENT);
-        tokenPrecedence.put(Lexer.TokenType.MINUSMINUS, PrecedencePairs.PRE_POST_DECREMENT);
+        infixParsers.put(TokenType.PLUS, new PlusInfixParser());
+        infixParsers.put(TokenType.MINUS, new MinusInfixParser());
+        infixParsers.put(TokenType.MULTIPLY, new MultInfixParser());
+        infixParsers.put(TokenType.DIVIDE, new DivideInfixParser());
+        infixParsers.put(TokenType.ASSIGNMENT, new AssignmentInfixParser());
+        infixParsers.put(TokenType.PLUSPLUS, new PlusPlusInfixParser());
+        infixParsers.put(TokenType.MINUSMINUS, new MinusMinusInfixParser());
+        prefixParsers.put(TokenType.EOF, new EofPrefixParser());
+        prefixParsers.put(TokenType.NUMBER, new NumberPrefixParser());
+        prefixParsers.put(TokenType.MINUS, new MinusPrefixParser());
+        prefixParsers.put(TokenType.PLUS, new PlusPrefixParser());
+        prefixParsers.put(TokenType.LPAREN, new LParenPrefixParser());
+        prefixParsers.put(TokenType.IDENTIFIER, new IdentifierPrefixParser());
+        prefixParsers.put(TokenType.EOL, new EndOfLinePrefixParser());
+        prefixParsers.put(TokenType.PLUSPLUS, new PlusPlusPrefixParser());
+        prefixParsers.put(TokenType.MINUSMINUS, new MinusMinusPrefixParser());
+        tokenPrecedence.put(TokenType.PLUS, PrecedencePairs.PLUS_MINUS);
+        tokenPrecedence.put(TokenType.MINUS, PrecedencePairs.PLUS_MINUS);
+        tokenPrecedence.put(TokenType.MULTIPLY, PrecedencePairs.MULT_DIV);
+        tokenPrecedence.put(TokenType.DIVIDE, PrecedencePairs.MULT_DIV);
+        tokenPrecedence.put(TokenType.EOF, PrecedencePairs.EOF);
+        tokenPrecedence.put(TokenType.EOL, PrecedencePairs.EOL);
+        tokenPrecedence.put(TokenType.RPAREN, PrecedencePairs.PARENS);
+        tokenPrecedence.put(TokenType.ASSIGNMENT, PrecedencePairs.ASSIGNMENT);
+        tokenPrecedence.put(TokenType.PLUSPLUS, PrecedencePairs.PRE_POST_INCREMENT);
+        tokenPrecedence.put(TokenType.MINUSMINUS, PrecedencePairs.PRE_POST_DECREMENT);
     }
 
     static class PrecedencePairs {
-        static final Parser.Pair<Integer,Integer> EOF = new Parser.Pair<>(-1, null);
-        static final Parser.Pair<Integer,Integer> EOL = new Parser.Pair<>(-1, 0);
-        static final Parser.Pair<Integer,Integer> PARENS = new Parser.Pair<>(-1, 0);
-        static final Parser.Pair<Integer,Integer> PLUS_MINUS = new Parser.Pair<>(3, 4);
-        static final Parser.Pair<Integer,Integer> MULT_DIV = new Parser.Pair<>(7, 8);
-        static final Parser.Pair<Integer,Integer> SIGNED = new Parser.Pair<>(null, 10);
-        static final Parser.Pair<Integer,Integer> ASSIGNMENT = new Parser.Pair<>(1, 2);
-        static final Parser.Pair<Integer,Integer> PRE_INCREMENT = new Parser.Pair<>(null, 2);
-        static final Parser.Pair<Integer,Integer> PRE_DECREMENT = new Parser.Pair<>(null, 2);
-        static final Parser.Pair<Integer,Integer> PRE_POST_INCREMENT = new Parser.Pair<>(11, null);
-        static final Parser.Pair<Integer,Integer> PRE_POST_DECREMENT = new Parser.Pair<>(11, null);
+        static final Pair<Integer,Integer> EOF = new Pair<>(-1, null);
+        static final Pair<Integer,Integer> EOL = new Pair<>(-1, 0);
+        static final Pair<Integer,Integer> PARENS = new Pair<>(-1, 0);
+        static final Pair<Integer,Integer> PLUS_MINUS = new Pair<>(3, 4);
+        static final Pair<Integer,Integer> MULT_DIV = new Pair<>(7, 8);
+        static final Pair<Integer,Integer> SIGNED = new Pair<>(null, 10);
+        static final Pair<Integer,Integer> ASSIGNMENT = new Pair<>(1, 2);
+        static final Pair<Integer,Integer> PRE_INCREMENT = new Pair<>(null, 2);
+        static final Pair<Integer,Integer> PRE_DECREMENT = new Pair<>(null, 2);
+        static final Pair<Integer,Integer> PRE_POST_INCREMENT = new Pair<>(11, null);
+        static final Pair<Integer,Integer> PRE_POST_DECREMENT = new Pair<>(11, null);
     }
 
-    private static class EmptyNode extends Parser.Node {
+    private static class EmptyNode extends Node {
     }
 
-    static class ExpressionNode extends Parser.Node {
+    static class ExpressionNode extends Node {
     }
 
     public static class LiteralNode extends ExpressionNode {
@@ -143,11 +149,11 @@ public class CalculatorParser {
             this.op = op;
         }
 
-        Parser.Node getLhs() {
+        Node getLhs() {
             return lhs;
         }
 
-        Parser.Node getRhs() {
+        Node getRhs() {
             return rhs;
         }
 
@@ -204,35 +210,35 @@ public class CalculatorParser {
         }
     }
 
-    static class EofPrefixParser implements Parser.PrefixParser {
+    static class EofPrefixParser implements PrefixParser {
 
         @Override
-        public Parser.Node parse(final Lexer.Token token, final Parser parser, Lexer lexer) {
+        public Node parse(final Token token, final Parser parser, Lexer lexer) {
             return new EmptyNode();
         }
     }
 
-    static class EndOfLinePrefixParser implements Parser.PrefixParser {
+    static class EndOfLinePrefixParser implements PrefixParser {
 
         @Override
-        public Parser.Node parse(final Lexer.Token token, final Parser parser, final Lexer lexer) {
+        public Node parse(final Token token, final Parser parser, final Lexer lexer) {
             return parser.parse(lexer, PrecedencePairs.EOL.getRight());
         }
     }
 
-    static class NumberPrefixParser implements Parser.PrefixParser {
+    static class NumberPrefixParser implements PrefixParser {
 
         @Override
-        public Parser.Node parse(final Lexer.Token token, final Parser parser, Lexer lexer) {
+        public Node parse(final Token token, final Parser parser, Lexer lexer) {
             return new LiteralNode(token.getChars());
         }
     }
 
-    static class MinusPrefixParser implements Parser.PrefixParser {
+    static class MinusPrefixParser implements PrefixParser {
 
         @Override
-        public Parser.Node parse(final Lexer.Token token, final Parser parser, Lexer lexer) {
-            Parser.Node expr = parser.parse(lexer, PrecedencePairs.SIGNED.getRight());
+        public Node parse(final Token token, final Parser parser, Lexer lexer) {
+            Node expr = parser.parse(lexer, PrecedencePairs.SIGNED.getRight());
             if (!(expr instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for negative-signed");
             }
@@ -240,11 +246,11 @@ public class CalculatorParser {
         }
     }
 
-    static class MinusMinusPrefixParser implements Parser.PrefixParser {
+    static class MinusMinusPrefixParser implements PrefixParser {
 
         @Override
-        public Parser.Node parse(final Lexer.Token token, final Parser parser, final Lexer lexer) {
-            Parser.Node expr = parser.parse(lexer, PrecedencePairs.PRE_DECREMENT.getRight());
+        public Node parse(final Token token, final Parser parser, final Lexer lexer) {
+            Node expr = parser.parse(lexer, PrecedencePairs.PRE_DECREMENT.getRight());
             if (!(expr instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for pre-decrement");
             }
@@ -252,11 +258,11 @@ public class CalculatorParser {
         }
     }
 
-    static class PlusPrefixParser implements Parser.PrefixParser {
+    static class PlusPrefixParser implements PrefixParser {
 
         @Override
-        public Parser.Node parse(final Lexer.Token token, final Parser parser, final Lexer lexer) {
-            Parser.Node expr = parser.parse(lexer, PrecedencePairs.SIGNED.getRight());
+        public Node parse(final Token token, final Parser parser, final Lexer lexer) {
+            Node expr = parser.parse(lexer, PrecedencePairs.SIGNED.getRight());
             if (!(expr instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for positive-signed");
             }
@@ -264,11 +270,11 @@ public class CalculatorParser {
         }
     }
 
-    static class PlusPlusPrefixParser implements Parser.PrefixParser {
+    static class PlusPlusPrefixParser implements PrefixParser {
 
         @Override
-        public Parser.Node parse(final Lexer.Token token, final Parser parser, final Lexer lexer) {
-            Parser.Node expr = parser.parse(lexer, PrecedencePairs.PRE_INCREMENT.getRight());
+        public Node parse(final Token token, final Parser parser, final Lexer lexer) {
+            Node expr = parser.parse(lexer, PrecedencePairs.PRE_INCREMENT.getRight());
             if (!(expr instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for pre-increment");
             }
@@ -276,32 +282,32 @@ public class CalculatorParser {
         }
     }
 
-    static class LParenPrefixParser implements Parser.PrefixParser {
+    static class LParenPrefixParser implements PrefixParser {
 
         @Override
-        public Parser.Node parse(final Lexer.Token token, final Parser parser, final Lexer lexer) {
-            Parser.Node expr = parser.parse(lexer, PrecedencePairs.PARENS.getRight());
-            Lexer.Token tok = lexer.next();
-            if (!(tok.getType() == Lexer.TokenType.RPAREN)) {
+        public Node parse(final Token token, final Parser parser, final Lexer lexer) {
+            Node expr = parser.parse(lexer, PrecedencePairs.PARENS.getRight());
+            Token tok = lexer.next();
+            if (!(tok.getType() == TokenType.RPAREN)) {
                 throw new IllegalStateException("Expected a right parenthesis but got " + tok);
             }
             return expr;
         }
     }
 
-    static class IdentifierPrefixParser implements Parser.PrefixParser {
+    static class IdentifierPrefixParser implements PrefixParser {
 
         @Override
-        public Parser.Node parse(final Lexer.Token token, final Parser parser, final Lexer lexer) {
+        public Node parse(final Token token, final Parser parser, final Lexer lexer) {
             return new IdentifierNode(token.getChars());
         }
     }
 
-    static class PlusInfixParser implements Parser.InfixParser {
+    static class PlusInfixParser implements InfixParser {
 
         @Override
-        public Parser.Node parse(final Parser.Node node, final Parser parser, final Lexer lexer) {
-            Parser.Node rhs = parser.parse(lexer, PrecedencePairs.PLUS_MINUS.getRight());
+        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
+            Node rhs = parser.parse(lexer, PrecedencePairs.PLUS_MINUS.getRight());
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for lhs argument to plus");
             }
@@ -312,10 +318,10 @@ public class CalculatorParser {
         }
     }
 
-    static class PlusPlusInfixParser implements Parser.InfixParser {
+    static class PlusPlusInfixParser implements InfixParser {
 
         @Override
-        public Parser.Node parse(final Parser.Node node, final Parser parser, final Lexer lexer) {
+        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for post-increment");
             }
@@ -323,11 +329,11 @@ public class CalculatorParser {
         }
     }
 
-    static class MinusInfixParser implements Parser.InfixParser {
+    static class MinusInfixParser implements InfixParser {
 
         @Override
-        public Parser.Node parse(final Parser.Node node, final Parser parser, final Lexer lexer) {
-            Parser.Node rhs = parser.parse(lexer, PrecedencePairs.PLUS_MINUS.getRight());
+        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
+            Node rhs = parser.parse(lexer, PrecedencePairs.PLUS_MINUS.getRight());
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for lhs argument to minus");
             }
@@ -338,10 +344,10 @@ public class CalculatorParser {
         }
     }
 
-    static class MinusMinusInfixParser implements Parser.InfixParser {
+    static class MinusMinusInfixParser implements InfixParser {
 
         @Override
-        public Parser.Node parse(final Parser.Node node, final Parser parser, final Lexer lexer) {
+        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for post-decrement");
             }
@@ -349,11 +355,11 @@ public class CalculatorParser {
         }
     }
 
-    static class MultInfixParser implements Parser.InfixParser {
+    static class MultInfixParser implements InfixParser {
 
         @Override
-        public Parser.Node parse(final Parser.Node node, final Parser parser, final Lexer lexer) {
-            Parser.Node rhs = parser.parse(lexer, PrecedencePairs.MULT_DIV.getRight());
+        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
+            Node rhs = parser.parse(lexer, PrecedencePairs.MULT_DIV.getRight());
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for lhs argument to multiply");
             }
@@ -364,11 +370,11 @@ public class CalculatorParser {
         }
     }
 
-    static class DivideInfixParser implements Parser.InfixParser {
+    static class DivideInfixParser implements InfixParser {
 
         @Override
-        public Parser.Node parse(final Parser.Node node, final Parser parser, final Lexer lexer) {
-            Parser.Node rhs = parser.parse(lexer, PrecedencePairs.MULT_DIV.getRight());
+        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
+            Node rhs = parser.parse(lexer, PrecedencePairs.MULT_DIV.getRight());
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for lhs argument to divide");
             }
@@ -379,11 +385,11 @@ public class CalculatorParser {
         }
     }
 
-    static class AssignmentInfixParser implements Parser.InfixParser {
+    static class AssignmentInfixParser implements InfixParser {
 
         @Override
-        public Parser.Node parse(final Parser.Node node, final Parser parser, final Lexer lexer) {
-            Parser.Node rhs = parser.parse(lexer, PrecedencePairs.ASSIGNMENT.getRight());
+        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
+            Node rhs = parser.parse(lexer, PrecedencePairs.ASSIGNMENT.getRight());
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for lhs argument to assignment");
             }

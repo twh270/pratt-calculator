@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Scanner;
 
 import org.byteworks.xl.lexer.Lexer;
+import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.Parser;
 
 public class REPL {
@@ -17,7 +18,7 @@ public class REPL {
             if("quit".equalsIgnoreCase(input)) {
                 return;
             }
-            List<Parser.Node> nodes = parser.parse(new Lexer(input));
+            List<Node> nodes = parser.parse(new Lexer(input));
             interpreter.exec(nodes, System.out);
         }
     }

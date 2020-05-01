@@ -7,7 +7,7 @@ class LexerTest {
     @Test
     void parsesPaddedNumber() {
         Lexer testObj = new Lexer("  23  ");
-        Lexer.Token next = testObj.next();
+        Token next = testObj.next();
         Assertions.assertTrue(next instanceof Lexer.Number);
         Lexer.Number num = (Lexer.Number) next;
         Assertions.assertEquals("23", num.getChars());

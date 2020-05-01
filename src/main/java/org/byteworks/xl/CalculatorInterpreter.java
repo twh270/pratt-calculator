@@ -10,7 +10,7 @@ import java.util.Stack;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.byteworks.xl.parser.Parser;
+import org.byteworks.xl.parser.Node;
 
 public class CalculatorInterpreter {
     private static final String TYPE_NUMBER = "Number";
@@ -261,8 +261,8 @@ public class CalculatorInterpreter {
         }
     }
 
-    public void exec(List<Parser.Node> nodes, PrintStream ps) {
-        for (Parser.Node node : nodes) {
+    public void exec(List<Node> nodes, PrintStream ps) {
+        for (Node node : nodes) {
             if (node instanceof CalculatorParser.ExpressionNode) {
                 ps.println(evaluateExpression((CalculatorParser.ExpressionNode) node));
             }

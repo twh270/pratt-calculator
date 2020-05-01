@@ -5,38 +5,19 @@ import java.util.List;
 import java.util.Map;
 
 import org.byteworks.xl.lexer.Lexer;
+import org.byteworks.xl.lexer.Token;
+import org.byteworks.xl.lexer.TokenType;
 
 public class Parser {
 
-    private final Map<Lexer.TokenType, PrefixParser> prefixParsers;
-    private final Map<Lexer.TokenType, InfixParser> infixParsers;
-    private final Map<Lexer.TokenType, Pair<Integer, Integer>> tokenPrecedence;
+    private final Map<TokenType, PrefixParser> prefixParsers;
+    private final Map<TokenType, InfixParser> infixParsers;
+    private final Map<TokenType, Pair<Integer, Integer>> tokenPrecedence;
 
-    public Parser(Map<Lexer.TokenType, PrefixParser> prefixParsers, Map<Lexer.TokenType, InfixParser> infixParsers, Map<Lexer.TokenType, Pair<Integer, Integer>> tokenPrecedence) {
+    public Parser(Map<TokenType, PrefixParser> prefixParsers, Map<TokenType, InfixParser> infixParsers, Map<TokenType, Pair<Integer, Integer>> tokenPrecedence) {
         this.prefixParsers = prefixParsers;
         this.infixParsers = infixParsers;
         this.tokenPrecedence = tokenPrecedence;
-    }
-
-    public static class Pair<L, R> {
-        private final L left;
-        private final R right;
-
-        public Pair(L left, R right) {
-            this.left = left;
-            this.right = right;
-        }
-
-        public L getLeft() {
-            return left;
-        }
-
-        public R getRight() {
-            return right;
-        }
-    }
-
-    public static class Node {
     }
 
 
@@ -52,7 +33,7 @@ public class Parser {
     }
 
     public Node parse(final Lexer lexer, final int precedence) {
-        Lexer.Token token = lexer.next();
+        Token token = lexer.next();
         Node node = parseFirstNode(lexer, token);
         while (shouldParseInfix(lexer, precedence)) {
             token = lexer.next();
@@ -62,7 +43,7 @@ public class Parser {
     }
 
     private boolean shouldParseInfix(Lexer lexer, int precedence) {
-        Lexer.Token token = lexer.peek();
+        Token token = lexer.peek();
         final Pair<Integer, Integer> precedencePair = precedence(token);
         if (precedencePair == null) {
             throw new IllegalStateException("Got no precedence pair for parse infix, token = " + token);
@@ -70,22 +51,14 @@ public class Parser {
         return precedencePair.getLeft() >= precedence;
     }
 
-    public interface InfixParser {
-        Node parse(Node node, Parser parser, Lexer lexer);
-    }
-
-    public interface PrefixParser {
-        Node parse(Lexer.Token token, Parser parser, Lexer lexer);
-    }
-
-    private Node parseFirstNode(final Lexer lexer, Lexer.Token token) {
+    private Node parseFirstNode(final Lexer lexer, Token token) {
         if (prefixParsers.get(token.getType()) != null) {
             return prefixParsers.get(token.getType()).parse(token, this, lexer);
         }
         throw new IllegalArgumentException("Invalid token " + token);
     }
 
-    private Pair<Integer, Integer> precedence(Lexer.Token token) {
+    private Pair<Integer, Integer> precedence(Token token) {
         return tokenPrecedence.get(token.getType());
     }
 

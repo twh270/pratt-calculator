@@ -6,11 +6,6 @@ public class Lexer {
 
     public Lexer(String input) { this.input = input; }
 
-    public enum TokenType {
-        UNKNOWN, PLUS, PLUSPLUS, MINUS, MINUSMINUS, MULTIPLY, DIVIDE, LPAREN, RPAREN, EOF, EOL, NUMBER, IDENTIFIER,
-        ASSIGNMENT
-    }
-
     private static class Tokens {
         final static Eof EOF = new Eof();
         final static Eol EOL = new Eol();
@@ -23,19 +18,6 @@ public class Lexer {
         final static Operator LPAREN = new Operator("(", TokenType.LPAREN);
         final static Operator RPAREN = new Operator(")", TokenType.RPAREN);
         final static Operator ASSIGNMENT = new Operator("=", TokenType.ASSIGNMENT);
-    }
-
-    public static class Token {
-        private final String chars;
-        private final TokenType type;
-        Token(String chars, TokenType type) { this.chars = chars; this.type = type; }
-        public String getChars() { return chars; }
-        public TokenType getType() { return type; }
-
-        @Override
-        public String toString() {
-            return "Token." + this.getClass().getSimpleName() + "(type=" + type + ", chars='" + chars + "')";
-        }
     }
 
     static class Number extends Token {

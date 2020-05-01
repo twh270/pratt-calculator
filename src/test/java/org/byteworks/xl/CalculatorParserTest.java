@@ -3,6 +3,7 @@ package org.byteworks.xl;
 import java.util.List;
 
 import org.byteworks.xl.lexer.Lexer;
+import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.Parser;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -13,7 +14,7 @@ class CalculatorParserTest {
     void parseAddition() {
         Lexer lexer = new Lexer("1 + 2");
         Parser parser = CalculatorParser.createParser();
-        List<Parser.Node> ast = parser.parse(lexer);
+        List<Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.forEach(sb::append);
         Assertions.assertEquals("(+ 1 2)", sb.toString());
@@ -23,7 +24,7 @@ class CalculatorParserTest {
     void parseMultiplication() {
         Lexer lexer = new Lexer("1 * 2");
         Parser parser = CalculatorParser.createParser();
-        List<Parser.Node> ast = parser.parse(lexer);
+        List<Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.forEach(sb::append);
         Assertions.assertEquals("(* 1 2)", sb.toString());
@@ -33,7 +34,7 @@ class CalculatorParserTest {
     void parseSimpleExpression() {
         Lexer lexer = new Lexer("1 + 2 * 3");
         Parser parser = CalculatorParser.createParser();
-        List<Parser.Node> ast = parser.parse(lexer);
+        List<Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.forEach(sb::append);
         Assertions.assertEquals("(+ 1 (* 2 3))", sb.toString());
@@ -43,7 +44,7 @@ class CalculatorParserTest {
     void parseComplexExpression() {
         Lexer lexer = new Lexer("4 * 1 + 2 * 3");
         Parser parser = CalculatorParser.createParser();
-        List<Parser.Node> ast = parser.parse(lexer);
+        List<Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.forEach(sb::append);
         Assertions.assertEquals("(+ (* 4 1) (* 2 3))", sb.toString());
@@ -53,7 +54,7 @@ class CalculatorParserTest {
     void parseNegativeNumber() {
         Lexer lexer = new Lexer("-3 + 4");
         Parser parser = CalculatorParser.createParser();
-        List<Parser.Node> ast = parser.parse(lexer);
+        List<Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.forEach(sb::append);
         Assertions.assertEquals("(+ -(3) 4)", sb.toString());
@@ -63,7 +64,7 @@ class CalculatorParserTest {
     void parsePositiveNumber() {
         Lexer lexer = new Lexer("3 + +4");
         Parser parser = CalculatorParser.createParser();
-        List<Parser.Node> ast = parser.parse(lexer);
+        List<Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.forEach(sb::append);
         Assertions.assertEquals("(+ 3 +(4))", sb.toString());
@@ -73,7 +74,7 @@ class CalculatorParserTest {
     void parsesSimpleParenthesized() {
         Lexer lexer = new Lexer("(3 + 4)");
         Parser parser = CalculatorParser.createParser();
-        List<Parser.Node> ast = parser.parse(lexer);
+        List<Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.forEach(sb::append);
         Assertions.assertEquals("(+ 3 4)", sb.toString());
@@ -83,7 +84,7 @@ class CalculatorParserTest {
     void parseParenthesized() {
         Lexer lexer = new Lexer("(3 + 4) * 6");
         Parser parser = CalculatorParser.createParser();
-        List<Parser.Node> ast = parser.parse(lexer);
+        List<Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.forEach(sb::append);
         Assertions.assertEquals("(* (+ 3 4) 6)", sb.toString());
@@ -93,7 +94,7 @@ class CalculatorParserTest {
     void simpleVariableAssignmentTest() {
         Lexer lexer = new Lexer("x = 3");
         Parser parser = CalculatorParser.createParser();
-        List<Parser.Node> ast = parser.parse(lexer);
+        List<Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.forEach(sb::append);
         Assertions.assertEquals("(= x 3)", sb.toString());
@@ -103,7 +104,7 @@ class CalculatorParserTest {
     void expressionVariableAssignmentTest() {
         Lexer lexer = new Lexer("x = 3 * (4 + 9)");
         Parser parser = CalculatorParser.createParser();
-        List<Parser.Node> ast = parser.parse(lexer);
+        List<Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.forEach(sb::append);
         Assertions.assertEquals("(= x (* 3 (+ 4 9)))", sb.toString());
@@ -113,7 +114,7 @@ class CalculatorParserTest {
     void endOfLineTest() {
         Lexer lexer = new Lexer("x = 3\nx * 2");
         Parser parser = CalculatorParser.createParser();
-        List<Parser.Node> ast = parser.parse(lexer);
+        List<Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.forEach(sb::append);
         Assertions.assertEquals("(= x 3)(* x 2)", sb.toString());
@@ -123,7 +124,7 @@ class CalculatorParserTest {
     void preIncrement() {
         Lexer lexer = new Lexer("++4");
         Parser parser = CalculatorParser.createParser();
-        List<Parser.Node> ast = parser.parse(lexer);
+        List<Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.forEach(sb::append);
         Assertions.assertEquals("++(4)", sb.toString());
@@ -133,7 +134,7 @@ class CalculatorParserTest {
     void preDecrement() {
         Lexer lexer = new Lexer("--4");
         Parser parser = CalculatorParser.createParser();
-        List<Parser.Node> ast = parser.parse(lexer);
+        List<Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.forEach(sb::append);
         Assertions.assertEquals("--(4)", sb.toString());
@@ -143,7 +144,7 @@ class CalculatorParserTest {
     void postIncrement() {
         Lexer lexer = new Lexer("4++");
         Parser parser = CalculatorParser.createParser();
-        List<Parser.Node> ast = parser.parse(lexer);
+        List<Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.forEach(sb::append);
         Assertions.assertEquals("++(4)", sb.toString());
@@ -153,7 +154,7 @@ class CalculatorParserTest {
     void postDecrement() {
         Lexer lexer = new Lexer("4--");
         Parser parser = CalculatorParser.createParser();
-        List<Parser.Node> ast = parser.parse(lexer);
+        List<Node> ast = parser.parse(lexer);
         StringBuilder sb = new StringBuilder();
         ast.forEach(sb::append);
         Assertions.assertEquals("--(4)", sb.toString());
