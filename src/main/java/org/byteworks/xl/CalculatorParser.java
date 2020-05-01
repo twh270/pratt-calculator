@@ -1,8 +1,5 @@
 package org.byteworks.xl;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.byteworks.xl.lexer.Lexer;
 import org.byteworks.xl.lexer.Token;
 import org.byteworks.xl.lexer.TokenType;
@@ -13,66 +10,57 @@ import org.byteworks.xl.parser.Parser;
 import org.byteworks.xl.parser.PrefixParser;
 
 public class CalculatorParser {
-    private static final Map<TokenType, PrefixParser> prefixParsers = new HashMap<>();
-    private static final Map<TokenType, InfixParser> infixParsers = new HashMap<>();
-    private static final Map<TokenType, Pair<Integer, Integer>> tokenPrecedence = new HashMap<>();
-
-    static {
-        infixParsers.put(TokenType.PLUS, new PlusInfixParser());
-        infixParsers.put(TokenType.MINUS, new MinusInfixParser());
-        infixParsers.put(TokenType.MULTIPLY, new MultiplyInfixParser());
-        infixParsers.put(TokenType.DIVIDE, new DivideInfixParser());
-        infixParsers.put(TokenType.ASSIGNMENT, new AssignmentInfixParser());
-        infixParsers.put(TokenType.PLUSPLUS, new PlusPlusInfixParser());
-        infixParsers.put(TokenType.MINUSMINUS, new MinusMinusInfixParser());
-        infixParsers.put(TokenType.COMMA, new CommaInfixParser());
-        infixParsers.put(TokenType.ARROW, new ArrowInfixParser());
-        infixParsers.put(TokenType.COLON, new ColonInfixParser());
-        prefixParsers.put(TokenType.EOF, new EofPrefixParser());
-        prefixParsers.put(TokenType.NUMBER, new NumberPrefixParser());
-        prefixParsers.put(TokenType.MINUS, new MinusPrefixParser());
-        prefixParsers.put(TokenType.PLUS, new PlusPrefixParser());
-        prefixParsers.put(TokenType.LPAREN, new LParenPrefixParser());
-        prefixParsers.put(TokenType.IDENTIFIER, new IdentifierPrefixParser());
-        prefixParsers.put(TokenType.EOL, new EndOfLinePrefixParser());
-        prefixParsers.put(TokenType.PLUSPLUS, new PlusPlusPrefixParser());
-        prefixParsers.put(TokenType.MINUSMINUS, new MinusMinusPrefixParser());
-        prefixParsers.put(TokenType.FUNCTION_DEFINITION, new FunctionDefinitionPrefixParser());
-        prefixParsers.put(TokenType.LBRACE, new LeftBracePrefixParser());
-        tokenPrecedence.put(TokenType.PLUS, PrecedencePairs.PLUS_MINUS);
-        tokenPrecedence.put(TokenType.MINUS, PrecedencePairs.PLUS_MINUS);
-        tokenPrecedence.put(TokenType.MULTIPLY, PrecedencePairs.MULT_DIV);
-        tokenPrecedence.put(TokenType.DIVIDE, PrecedencePairs.MULT_DIV);
-        tokenPrecedence.put(TokenType.EOF, PrecedencePairs.EOF);
-        tokenPrecedence.put(TokenType.EOL, PrecedencePairs.EOL);
-        tokenPrecedence.put(TokenType.RPAREN, PrecedencePairs.PARENS);
-        tokenPrecedence.put(TokenType.ASSIGNMENT, PrecedencePairs.ASSIGNMENT);
-        tokenPrecedence.put(TokenType.PLUSPLUS, PrecedencePairs.PRE_POST_INCREMENT);
-        tokenPrecedence.put(TokenType.MINUSMINUS, PrecedencePairs.PRE_POST_DECREMENT);
-        tokenPrecedence.put(TokenType.COMMA, PrecedencePairs.COMMA);
-        tokenPrecedence.put(TokenType.ARROW, PrecedencePairs.ARROW);
-        tokenPrecedence.put(TokenType.LBRACE, PrecedencePairs.LBRACE);
-        tokenPrecedence.put(TokenType.RBRACE, PrecedencePairs.RBRACE);
-        tokenPrecedence.put(TokenType.COLON, PrecedencePairs.COLON);
-    }
 
     static class PrecedencePairs {
-        static final Pair<Integer,Integer> EOF = new Pair<>(-1, null);
-        static final Pair<Integer,Integer> EOL = new Pair<>(-1, 0);
-        static final Pair<Integer,Integer> PARENS = new Pair<>(-1, 0);
-        static final Pair<Integer,Integer> LBRACE = new Pair<>(-1, 0);
-        static final Pair<Integer,Integer> RBRACE = new Pair<>(-1, 0);
-        static final Pair<Integer,Integer> PRE_INCREMENT = new Pair<>(null, 2);
-        static final Pair<Integer,Integer> PRE_DECREMENT = new Pair<>(null, 2);
-        static final Pair<Integer,Integer> COMMA = new Pair<>(1, 2);
-        static final Pair<Integer,Integer> ARROW = new Pair<>(1, 2);
-        static final Pair<Integer,Integer> ASSIGNMENT = new Pair<>(3, 4);
-        static final Pair<Integer,Integer> PLUS_MINUS = new Pair<>(5, 6);
-        static final Pair<Integer,Integer> MULT_DIV = new Pair<>(7, 8);
-        static final Pair<Integer,Integer> SIGNED = new Pair<>(null, 10);
-        static final Pair<Integer,Integer> PRE_POST_INCREMENT = new Pair<>(11, null);
-        static final Pair<Integer,Integer> PRE_POST_DECREMENT = new Pair<>(11, null);
-        static final Pair<Integer,Integer> COLON = new Pair<>(11, 12);
+        static final Pair<Integer, Integer> EOF = new Pair<>(-1, null);
+        static final Pair<Integer, Integer> EOL = new Pair<>(-1, 0);
+        static final Pair<Integer, Integer> PARENS = new Pair<>(-1, 0);
+        static final Pair<Integer, Integer> BRACES = new Pair<>(-1, 0);
+        static final Pair<Integer, Integer> COMMA = new Pair<>(1, 2);
+        static final Pair<Integer, Integer> ARROW = new Pair<>(1, 2);
+        static final Pair<Integer, Integer> ASSIGNMENT = new Pair<>(3, 4);
+        static final Pair<Integer, Integer> PLUS_MINUS = new Pair<>(5, 6);
+        static final Pair<Integer, Integer> MULT_DIV = new Pair<>(7, 8);
+        static final Pair<Integer, Integer> SIGNED = new Pair<>(null, 10);
+        static final Pair<Integer, Integer> PRE_INCREMENT = new Pair<>(null, 11);
+        static final Pair<Integer, Integer> PRE_DECREMENT = new Pair<>(null, 11);
+        static final Pair<Integer, Integer> POST_INCREMENT = new Pair<>(11, null);
+        static final Pair<Integer, Integer> POST_DECREMENT = new Pair<>(11, null);
+        static final Pair<Integer, Integer> COLON = new Pair<>(11, 12);
+    }
+
+    private enum ParserRule {
+        PLUS(TokenType.PLUS, PrecedencePairs.PLUS_MINUS, new PlusPrefixParser(), new PlusInfixParser()),
+        MINUS(TokenType.MINUS, PrecedencePairs.PLUS_MINUS, new MinusPrefixParser(), new MinusInfixParser()),
+        MULTIPLY(TokenType.MULTIPLY, PrecedencePairs.MULT_DIV, null, new MultiplyInfixParser()),
+        DIVIDE(TokenType.DIVIDE, PrecedencePairs.MULT_DIV, null, new DivideInfixParser()),
+        ASSIGNMENT(TokenType.ASSIGNMENT, PrecedencePairs.ASSIGNMENT, null, new AssignmentInfixParser()),
+        PLUSPLUS(TokenType.PLUSPLUS, PrecedencePairs.POST_INCREMENT, new PlusPlusPrefixParser(), new PlusPlusInfixParser()),
+        MINUSMINUS(TokenType.MINUSMINUS, PrecedencePairs.POST_DECREMENT, new MinusMinusPrefixParser(), new MinusMinusInfixParser()),
+        COMMA(TokenType.COMMA, PrecedencePairs.COMMA, null, new CommaInfixParser()),
+        ARROW(TokenType.ARROW, PrecedencePairs.ARROW, null, new ArrowInfixParser()),
+        COLON(TokenType.COLON, PrecedencePairs.COLON, null, new ColonInfixParser()),
+        EOF(TokenType.EOF, PrecedencePairs.EOF, new EofPrefixParser(), null),
+        NUMBER(TokenType.NUMBER, null, new NumberPrefixParser(), null),
+        LPAREN(TokenType.LPAREN, null, new LParenPrefixParser(), null),
+        IDENTIFIER(TokenType.IDENTIFIER, null, new IdentifierPrefixParser(), null),
+        EOL(TokenType.EOL, PrecedencePairs.EOL, new EndOfLinePrefixParser(), null),
+        FUNCTION_DEFINITION(TokenType.FUNCTION_DEFINITION, null, new FunctionDefinitionPrefixParser(), null),
+        LBRACE(TokenType.LBRACE, PrecedencePairs.BRACES, new LeftBracePrefixParser(), null),
+        RPAREN(TokenType.RPAREN, PrecedencePairs.PARENS, null, null),
+        RBRACE(TokenType.RBRACE, PrecedencePairs.BRACES, null, null);
+
+        final TokenType tokenType;
+        final Pair<Integer, Integer> precedencePair;
+        final PrefixParser prefixParser;
+        final InfixParser infixParser;
+
+        ParserRule(final TokenType tokenType, final Pair<Integer, Integer> precedencePair, final PrefixParser prefixParser, final InfixParser infixParser) {
+            this.tokenType = tokenType;
+            this.precedencePair = precedencePair;
+            this.prefixParser = prefixParser;
+            this.infixParser = infixParser;
+        }
     }
 
     private static class EmptyNode extends Node {
@@ -478,7 +466,7 @@ public class CalculatorParser {
 
         @Override
         public Node parse(final Token token, final Parser parser, final Lexer lexer) {
-            Node list = parser.parse(lexer, PrecedencePairs.LBRACE.getRight());
+            Node list = parser.parse(lexer, PrecedencePairs.BRACES.getRight());
             Token tok = lexer.next();
             if (!(tok.getType() == TokenType.RBRACE)) {
                 throw new IllegalStateException("Expected a right brace but got " + tok);
@@ -605,13 +593,17 @@ public class CalculatorParser {
     static class ColonInfixParser implements InfixParser {
 
         @Override
-        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
+        public Node parse(final Node node, final org.byteworks.xl.parser.Parser parser, final Lexer lexer) {
             Node typeExpression = parser.parse(lexer, PrecedencePairs.COLON.getRight());
             return new TypeExpressionNode(node, typeExpression);
         }
     }
 
     public static Parser createParser() {
-        return new Parser(prefixParsers, infixParsers, tokenPrecedence);
+        Parser parser = new Parser();
+        for (ParserRule rule : ParserRule.values()) {
+            parser.registerParserRule(rule.tokenType, rule.precedencePair, rule.prefixParser, rule.infixParser);
+        }
+        return parser;
     }
 }
