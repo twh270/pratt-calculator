@@ -14,18 +14,74 @@ public class CalculatorInterpreter {
     private final Stack<Value> stack = new Stack<>();
 
     private final List<Type> twoNumeric = List.of(Type.NUMBER, Type.NUMBER);
+    private final List<Type> oneNumeric = List.of(Type.NUMBER);
+
     private final FunctionDefinition numericAddition = new FunctionDefinition("add", twoNumeric, Type.NUMBER, (FunctionImplementation<Stack<Value>, Value>) stack -> {
         Value left = stack.pop();
         Value right = stack.pop();
-        checkOperandType(left, Type.NUMBER, "binary plus", "right");
-        checkOperandType(right, Type.NUMBER, "binary plus", "right");
+        checkOperandType(left, Type.NUMBER, "binary addition", "left");
+        checkOperandType(right, Type.NUMBER, "binary addition", "right");
         Long leftValue = (Long) left.getValue();
         Long rightValue = (Long) right.getValue();
         return new Value(leftValue + rightValue, Type.NUMBER);
     });
+    private final FunctionDefinition numericSubtraction = new FunctionDefinition("subtract", twoNumeric, Type.NUMBER, (FunctionImplementation<Stack<Value>, Value>) stack -> {
+        Value left = stack.pop();
+        Value right = stack.pop();
+        checkOperandType(left, Type.NUMBER, "binary subtraction", "left");
+        checkOperandType(right, Type.NUMBER, "binary subtraction", "right");
+        Long leftValue = (Long) left.getValue();
+        Long rightValue = (Long) right.getValue();
+        return new Value(leftValue - rightValue, Type.NUMBER);
+    });
+    private final FunctionDefinition numericMultiplication = new FunctionDefinition("multiply", twoNumeric, Type.NUMBER, (FunctionImplementation<Stack<Value>, Value>) stack -> {
+        Value left = stack.pop();
+        Value right = stack.pop();
+        checkOperandType(left, Type.NUMBER, "binary multiplication", "left");
+        checkOperandType(right, Type.NUMBER, "binary multiplication", "right");
+        Long leftValue = (Long) left.getValue();
+        Long rightValue = (Long) right.getValue();
+        return new Value(leftValue * rightValue, Type.NUMBER);
+    });
+    private final FunctionDefinition numericDivision = new FunctionDefinition("divide", twoNumeric, Type.NUMBER, (FunctionImplementation<Stack<Value>, Value>) stack -> {
+        Value left = stack.pop();
+        Value right = stack.pop();
+        checkOperandType(left, Type.NUMBER, "binary division", "left");
+        checkOperandType(right, Type.NUMBER, "binary division", "right");
+        Long leftValue = (Long) left.getValue();
+        Long rightValue = (Long) right.getValue();
+        return new Value(leftValue / rightValue, Type.NUMBER);
+    });
+    private final FunctionDefinition preIncrement = new FunctionDefinition("preincrement", oneNumeric, Type.NUMBER, (FunctionImplementation<Stack<Value>, Value>) stack -> {
+        Value operand = stack.pop();
+        checkOperandType(operand, Type.NUMBER, "pre-increment", "operand");
+        return new Value((Long) operand.getValue() + 1, Type.NUMBER);
+    });
+    private final FunctionDefinition preDecrement = new FunctionDefinition("predecrement", oneNumeric, Type.NUMBER, (FunctionImplementation<Stack<Value>, Value>) stack -> {
+        Value operand = stack.pop();
+        checkOperandType(operand, Type.NUMBER, "pre-decrement", "operand");
+        return new Value((Long) operand.getValue() - 1, Type.NUMBER);
+    });
+    private final FunctionDefinition postIncrement = new FunctionDefinition("postincrement", oneNumeric, Type.NUMBER, (FunctionImplementation<Stack<Value>, Value>) stack -> {
+        Value operand = stack.pop();
+        checkOperandType(operand, Type.NUMBER, "post-increment", "operand");
+        return new Value((Long) operand.getValue() + 1, Type.NUMBER);
+    });
+    private final FunctionDefinition postDecrement = new FunctionDefinition("postdecrement", oneNumeric, Type.NUMBER, (FunctionImplementation<Stack<Value>, Value>) stack -> {
+        Value operand = stack.pop();
+        checkOperandType(operand, Type.NUMBER, "post-decrement", "operand");
+        return new Value((Long) operand.getValue() - 1, Type.NUMBER);
+    });
 
     public CalculatorInterpreter() {
         functions.put(numericAddition.getSignature(), numericAddition);
+        functions.put(numericSubtraction.getSignature(), numericSubtraction);
+        functions.put(numericMultiplication.getSignature(), numericMultiplication);
+        functions.put(numericDivision.getSignature(), numericDivision);
+        functions.put(preIncrement.getSignature(), preIncrement);
+        functions.put(preDecrement.getSignature(), preDecrement);
+        functions.put(postIncrement.getSignature(), postIncrement);
+        functions.put(postDecrement.getSignature(), postDecrement);
     }
 
     public Value getVariable(final String name) {
@@ -58,7 +114,7 @@ public class CalculatorInterpreter {
         @Override
         public boolean equals(final Object obj) {
             if (obj instanceof FunctionSignature) {
-                return ((FunctionSignature)obj).toString().equals(this.toString());
+                return obj.toString().equals(this.toString());
             }
             return false;
         }
@@ -149,90 +205,93 @@ public class CalculatorInterpreter {
             if (!(binaryOp.getLhs() instanceof CalculatorParser.IdentifierNode)) {
                 throw new IllegalStateException("The left hand side of an assignment must be a variable in expression " + binaryOp);
             }
-            CalculatorParser.IdentifierNode ident = (CalculatorParser.IdentifierNode) binaryOp.getLhs();
             Value value = evaluateExpression(rhs);
-            heap.put(ident.getChars(), value);
+            CalculatorParser.IdentifierNode ident = (CalculatorParser.IdentifierNode) binaryOp.getLhs();
+            assignVariableValue(ident, value);
             return value;
         }
         Value left = evaluateExpression(lhs);
         Value right = evaluateExpression(rhs);
         if (binaryOp instanceof CalculatorParser.PlusNode) {
-            FunctionSignature signature = new FunctionSignature("add", twoNumeric, Type.NUMBER);
-            FunctionDefinition fn = functions.get(signature);
-            stack.push(right);
-            stack.push(left);
-            return fn.execute(stack);
-//            return binaryPlus(left, right);
+            return callBinaryNumericFunction(left, right, "add");
         } else if (binaryOp instanceof CalculatorParser.MinusNode) {
-            return binaryMinus(left, right);
+            return callBinaryNumericFunction(left, right, "subtract");
         } else if (binaryOp instanceof CalculatorParser.MultNode) {
-            return binaryMult(left, right);
+            return callBinaryNumericFunction(left, right, "multiply");
         } else if (binaryOp instanceof CalculatorParser.DivideNode) {
-            return binaryDiv(left, right);
+            return callBinaryNumericFunction(left, right, "divide");
         } else {
-            throw new IllegalStateException("Don't know how to evaluate binary operator " + expression.getClass().getSimpleName() + " in expression " + expression);
+            throw new IllegalStateException("Don't know \nhow to evaluate binary operator " + expression.getClass().getSimpleName() + " in expression " + expression);
         }
+    }
+
+    private void assignVariableValue(CalculatorParser.IdentifierNode ident, Value value) {
+        heap.put(ident.getChars(), value);
+    }
+
+    private Value callBinaryNumericFunction(final Value left, final Value right, final String name) {
+        FunctionDefinition fn = getFunction(name, twoNumeric, Type.NUMBER);
+        stack.push(right);
+        stack.push(left);
+        return fn.execute(stack);
+    }
+
+    private Value callUnaryNumericFunction(final Value arg, final String name) {
+        FunctionDefinition fn = getFunction(name, oneNumeric, Type.NUMBER);
+        stack.push(arg);
+        return fn.execute(stack);
+    }
+
+    private FunctionDefinition getFunction(String name, List<Type> parameterTypes, Type returnType) {
+        FunctionSignature signature = new FunctionSignature(name, parameterTypes, returnType);
+        FunctionDefinition fn = functions.get(signature);
+        if (fn == null) {
+            throw new IllegalArgumentException("Could not find function matching signature '" + signature + "'");
+        }
+        return fn;
     }
 
     private Value unaryOperatorExpression(final CalculatorParser.ExpressionNode expression) {
         CalculatorParser.UnaryOpNode unaryOp = (CalculatorParser.UnaryOpNode) expression;
-        if (!(unaryOp.getExpr() instanceof CalculatorParser.ExpressionNode)) {
-            throw new IllegalStateException("Unary operator expected an expression but got " + unaryOp.getExpr() + " in expression " + expression);
-        }
-        Value value = evaluateExpression((CalculatorParser.ExpressionNode) unaryOp.getExpr());
-        if (value.getType() != Type.NUMBER) {
-            throw new IllegalStateException("Unary operator expected a number but got " + value + " in expression " + expression);
+        Value operand = evaluateExpression(unaryOp.getExpr());
+        if (operand.getType() != Type.NUMBER) {
+            throw new IllegalStateException("Unary operator expected a number but got " + operand + " in expression " + expression);
         }
         if (unaryOp instanceof CalculatorParser.NegativeSigned) {
-            return new Value(-((Long) value.getValue()), Type.NUMBER);
+            return new Value(-((Long) operand.getValue()), Type.NUMBER);
         } else if (unaryOp instanceof CalculatorParser.PositiveSigned) {
-            return new Value(value.getValue(), Type.NUMBER);
+            return new Value(operand.getValue(), Type.NUMBER);
         } else if (unaryOp instanceof CalculatorParser.PreIncrement) {
-            CalculatorParser.PreIncrement preIncrement = (CalculatorParser.PreIncrement) unaryOp;
-            if (preIncrement.getExpr() instanceof CalculatorParser.IdentifierNode) {
-                String variableName = ((CalculatorParser.IdentifierNode) preIncrement.getExpr()).getChars();
-                Value variableValue = heap.get(variableName);
-                Value updatedValue = new Value((Long) variableValue.getValue() + 1, Type.NUMBER);
-                heap.put(variableName, updatedValue);
-                return updatedValue;
+            Value result = callUnaryNumericFunction(operand, "preincrement");
+            if (unaryOp.getExpr() instanceof CalculatorParser.IdentifierNode) {
+                assignVariableValue((CalculatorParser.IdentifierNode) unaryOp.getExpr(), result);
             }
-            return new Value((Long) value.getValue() + 1, Type.NUMBER);
+            return result;
         } else if (unaryOp instanceof CalculatorParser.PreDecrement) {
-            CalculatorParser.PreDecrement preDecrement = (CalculatorParser.PreDecrement) unaryOp;
-            if (preDecrement.getExpr() instanceof CalculatorParser.IdentifierNode) {
-                String variableName = ((CalculatorParser.IdentifierNode) preDecrement.getExpr()).getChars();
-                Value variableValue = heap.get(variableName);
-                Value updatedValue = new Value((Long) variableValue.getValue() - 1, Type.NUMBER);
-                heap.put(variableName, updatedValue);
-                return updatedValue;
+            Value result = callUnaryNumericFunction(operand, "predecrement");
+            if (unaryOp.getExpr() instanceof CalculatorParser.IdentifierNode) {
+                assignVariableValue((CalculatorParser.IdentifierNode) unaryOp.getExpr(), result);
             }
-            return new Value((Long) value.getValue() - 1, Type.NUMBER);
+            return result;
         } else if (unaryOp instanceof CalculatorParser.PostIncrement) {
-            CalculatorParser.PostIncrement postIncrement = (CalculatorParser.PostIncrement) unaryOp;
-            if (postIncrement.getExpr() instanceof CalculatorParser.IdentifierNode) {
-                String variableName = ((CalculatorParser.IdentifierNode) postIncrement.getExpr()).getChars();
-                Value variableValue = heap.get(variableName);
-                heap.put(variableName, new Value((Long) variableValue.getValue() + 1, Type.NUMBER));
-                return variableValue;
+            Value result = callUnaryNumericFunction(operand, "postincrement");
+            if (unaryOp.getExpr() instanceof CalculatorParser.IdentifierNode) {
+                assignVariableValue((CalculatorParser.IdentifierNode) unaryOp.getExpr(), result);
             }
-            return new Value((Long) value.getValue() + 1, Type.NUMBER);
+            return operand;
         } else if (unaryOp instanceof CalculatorParser.PostDecrement) {
-            CalculatorParser.PostDecrement postDecrement = (CalculatorParser.PostDecrement) unaryOp;
-            if (postDecrement.getExpr() instanceof CalculatorParser.IdentifierNode) {
-                String variableName = ((CalculatorParser.IdentifierNode) postDecrement.getExpr()).getChars();
-                Value variableValue = heap.get(variableName);
-                heap.put(variableName, new Value((Long) variableValue.getValue() - 1, Type.NUMBER));
-                return variableValue;
+            Value result = callUnaryNumericFunction(operand, "postdecrement");
+            if (unaryOp.getExpr() instanceof CalculatorParser.IdentifierNode) {
+                assignVariableValue((CalculatorParser.IdentifierNode) unaryOp.getExpr(), result);
             }
-            return new Value((Long) value.getValue() - 1, Type.NUMBER);
+            return operand;
         } else {
             throw new IllegalStateException("Unknown unary operator " + unaryOp + " in expression " + expression);
         }
     }
 
     private Value identifierExpression(final CalculatorParser.IdentifierNode expression) {
-        CalculatorParser.IdentifierNode ident = expression;
-        String identName = ident.getChars();
+        String identName = expression.getChars();
         if (!heap.containsKey(identName)) {
             throw new IllegalStateException("Could not resolve variable " + identName);
         }
@@ -247,41 +306,6 @@ public class CalculatorInterpreter {
         } catch (NumberFormatException e) {
             throw new IllegalStateException("Unable to parse literal " + literal.getValue() + " in expression " + expression);
         }
-    }
-
-    private Value binaryPlus(Value left, Value right) {
-        checkOperandType(left, Type.NUMBER, "binary plus", "left");
-        checkOperandType(right, Type.NUMBER, "binary plus", "right");
-        Long leftValue = (Long) left.getValue();
-        Long rightValue = (Long) right.getValue();
-        return new Value(leftValue + rightValue, Type.NUMBER);
-    }
-
-    private Value binaryMinus(Value left, Value right) {
-        checkOperandType(left, Type.NUMBER, "binary minus", "left");
-        checkOperandType(right, Type.NUMBER, "binary minus", "right");
-        Long leftValue = (Long) left.getValue();
-        Long rightValue = (Long) right.getValue();
-        return new Value(leftValue - rightValue, Type.NUMBER);
-    }
-
-    private Value binaryMult(Value left, Value right) {
-        checkOperandType(left, Type.NUMBER, "binary multiply", "left");
-        checkOperandType(right, Type.NUMBER, "binary multiply", "right");
-        Long leftValue = (Long) left.getValue();
-        Long rightValue = (Long) right.getValue();
-        return new Value(leftValue * rightValue, Type.NUMBER);
-    }
-
-    private Value binaryDiv(Value left, Value right) {
-        checkOperandType(left, Type.NUMBER, "binary division", "left");
-        checkOperandType(right, Type.NUMBER, "binary division", "right");
-        Long leftValue = (Long) left.getValue();
-        Long rightValue = (Long) right.getValue();
-        if (0 == rightValue) {
-            throw new IllegalArgumentException("Cannot divide by zero");
-        }
-        return new Value(leftValue / rightValue, Type.NUMBER);
     }
 
     private void checkOperandType(Value value, Type expected, String operatorName, String operandName) {

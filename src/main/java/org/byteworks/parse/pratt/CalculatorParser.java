@@ -75,15 +75,15 @@ public class CalculatorParser {
     }
 
     public static class UnaryOpNode extends ExpressionNode {
-        private final Parser.Node expr;
+        private final ExpressionNode expr;
         private final String op;
 
-        public UnaryOpNode(final Parser.Node expr, String op) {
+        public UnaryOpNode(final ExpressionNode expr, String op) {
             this.expr = expr;
             this.op = op;
         }
 
-        public Parser.Node getExpr() {
+        public ExpressionNode getExpr() {
             return expr;
         }
 
@@ -94,47 +94,47 @@ public class CalculatorParser {
     }
 
     public static class NegativeSigned extends UnaryOpNode {
-        public NegativeSigned(final Parser.Node expr) {
+        public NegativeSigned(final ExpressionNode expr) {
             super(expr, "-");
         }
     }
 
     public static class PositiveSigned extends UnaryOpNode {
-        public PositiveSigned(final Parser.Node expr) {
+        public PositiveSigned(final ExpressionNode expr) {
             super(expr, "+");
         }
     }
 
     public static class PreIncrement extends UnaryOpNode {
-        public PreIncrement(final Parser.Node expr) {
+        public PreIncrement(final ExpressionNode expr) {
             super(expr, "++");
         }
     }
 
     public static class PreDecrement extends UnaryOpNode {
-        public PreDecrement(final Parser.Node expr) {
+        public PreDecrement(final ExpressionNode expr) {
             super(expr, "--");
         }
     }
 
     public static class PostIncrement extends UnaryOpNode {
-        public PostIncrement(final Parser.Node expr) {
+        public PostIncrement(final ExpressionNode expr) {
             super(expr, "++");
         }
     }
 
     public static class PostDecrement extends UnaryOpNode {
-        public PostDecrement(final Parser.Node expr) {
+        public PostDecrement(final ExpressionNode expr) {
             super(expr, "--");
         }
     }
 
     public static class BinaryOpNode extends ExpressionNode {
-        private final Parser.Node lhs;
-        private final Parser.Node rhs;
+        private final ExpressionNode lhs;
+        private final ExpressionNode rhs;
         private final String op;
 
-        public BinaryOpNode(Parser.Node lhs, Parser.Node rhs, String op) {
+        public BinaryOpNode(ExpressionNode lhs, ExpressionNode rhs, String op) {
             this.lhs = lhs;
             this.rhs = rhs;
             this.op = op;
@@ -155,31 +155,31 @@ public class CalculatorParser {
     }
 
     static class PlusNode extends BinaryOpNode {
-        public PlusNode(final Parser.Node lhs, final Parser.Node rhs) {
+        public PlusNode(final ExpressionNode lhs, final ExpressionNode rhs) {
             super(lhs, rhs, "+");
         }
     }
 
     static class MinusNode extends BinaryOpNode {
-        public MinusNode(final Parser.Node lhs, final Parser.Node rhs) {
+        public MinusNode(final ExpressionNode lhs, final ExpressionNode rhs) {
             super(lhs, rhs, "-");
         }
     }
 
     static class MultNode extends BinaryOpNode {
-        public MultNode(final Parser.Node lhs, final Parser.Node rhs) {
+        public MultNode(final ExpressionNode lhs, final ExpressionNode rhs) {
             super(lhs, rhs, "*");
         }
     }
 
     static class DivideNode extends BinaryOpNode {
-        public DivideNode(final Parser.Node lhs, final Parser.Node rhs) {
+        public DivideNode(final ExpressionNode lhs, final ExpressionNode rhs) {
             super(lhs, rhs, "/");
         }
     }
 
     static class AssignmentNode extends BinaryOpNode {
-        public AssignmentNode(final Parser.Node lhs, final Parser.Node rhs) {
+        public AssignmentNode(final ExpressionNode lhs, final ExpressionNode rhs) {
             super(lhs, rhs, "=");
         }
     }
@@ -230,7 +230,10 @@ public class CalculatorParser {
         @Override
         public Parser.Node parse(final Lexer.Token token, final Parser parser, Lexer lexer) {
             Parser.Node expr = parser.parse(lexer, PrecedencePairs.SIGNED.getRight());
-            return new NegativeSigned(expr);
+            if (!(expr instanceof ExpressionNode)) {
+                throw new IllegalStateException("Must provide an expression for negative-signed");
+            }
+            return new NegativeSigned((ExpressionNode) expr);
         }
     }
 
@@ -239,7 +242,10 @@ public class CalculatorParser {
         @Override
         public Parser.Node parse(final Lexer.Token token, final Parser parser, final Lexer lexer) {
             Parser.Node expr = parser.parse(lexer, PrecedencePairs.PRE_DECREMENT.getRight());
-            return new PreDecrement(expr);
+            if (!(expr instanceof ExpressionNode)) {
+                throw new IllegalStateException("Must provide an expression for pre-decrement");
+            }
+            return new PreDecrement((ExpressionNode) expr);
         }
     }
 
@@ -248,7 +254,10 @@ public class CalculatorParser {
         @Override
         public Parser.Node parse(final Lexer.Token token, final Parser parser, final Lexer lexer) {
             Parser.Node expr = parser.parse(lexer, PrecedencePairs.SIGNED.getRight());
-            return new PositiveSigned(expr);
+            if (!(expr instanceof ExpressionNode)) {
+                throw new IllegalStateException("Must provide an expression for positive-signed");
+            }
+            return new PositiveSigned((ExpressionNode) expr);
         }
     }
 
@@ -257,7 +266,10 @@ public class CalculatorParser {
         @Override
         public Parser.Node parse(final Lexer.Token token, final Parser parser, final Lexer lexer) {
             Parser.Node expr = parser.parse(lexer, PrecedencePairs.PRE_INCREMENT.getRight());
-            return new PreIncrement(expr);
+            if (!(expr instanceof ExpressionNode)) {
+                throw new IllegalStateException("Must provide an expression for pre-increment");
+            }
+            return new PreIncrement((ExpressionNode) expr);
         }
     }
 
@@ -287,7 +299,13 @@ public class CalculatorParser {
         @Override
         public Parser.Node parse(final Parser.Node node, final Lexer.Token token, final Parser parser, final Lexer lexer) {
             Parser.Node rhs = parser.parse(lexer, PrecedencePairs.PLUS_MINUS.getRight());
-            return new PlusNode(node, rhs);
+            if (!(node instanceof ExpressionNode)) {
+                throw new IllegalStateException("Must provide an expression for lhs argument to plus");
+            }
+            if (!(rhs instanceof ExpressionNode)) {
+                throw new IllegalStateException("Must provide an expression for rhs argument to plus");
+            }
+            return new PlusNode((ExpressionNode) node, (ExpressionNode) rhs);
         }
     }
 
@@ -295,7 +313,10 @@ public class CalculatorParser {
 
         @Override
         public Parser.Node parse(final Parser.Node node, final Lexer.Token token, final Parser parser, final Lexer lexer) {
-            return new PostIncrement(node);
+            if (!(node instanceof ExpressionNode)) {
+                throw new IllegalStateException("Must provide an expression for post-increment");
+            }
+            return new PostIncrement((ExpressionNode) node);
         }
     }
 
@@ -304,7 +325,13 @@ public class CalculatorParser {
         @Override
         public Parser.Node parse(final Parser.Node node, final Lexer.Token token, final Parser parser, final Lexer lexer) {
             Parser.Node rhs = parser.parse(lexer, PrecedencePairs.PLUS_MINUS.getRight());
-            return new MinusNode(node, rhs);
+            if (!(node instanceof ExpressionNode)) {
+                throw new IllegalStateException("Must provide an expression for lhs argument to minus");
+            }
+            if (!(rhs instanceof ExpressionNode)) {
+                throw new IllegalStateException("Must provide an expression for rhs argument to minus");
+            }
+            return new MinusNode((ExpressionNode) node, (ExpressionNode) rhs);
         }
     }
 
@@ -312,7 +339,10 @@ public class CalculatorParser {
 
         @Override
         public Parser.Node parse(final Parser.Node node, final Lexer.Token token, final Parser parser, final Lexer lexer) {
-            return new PostDecrement(node);
+            if (!(node instanceof ExpressionNode)) {
+                throw new IllegalStateException("Must provide an expression for post-decrement");
+            }
+            return new PostDecrement((ExpressionNode) node);
         }
     }
 
@@ -321,7 +351,13 @@ public class CalculatorParser {
         @Override
         public Parser.Node parse(final Parser.Node node, final Lexer.Token token, final Parser parser, final Lexer lexer) {
             Parser.Node rhs = parser.parse(lexer, PrecedencePairs.MULT_DIV.getRight());
-            return new MultNode(node, rhs);
+            if (!(node instanceof ExpressionNode)) {
+                throw new IllegalStateException("Must provide an expression for lhs argument to multiply");
+            }
+            if (!(rhs instanceof ExpressionNode)) {
+                throw new IllegalStateException("Must provide an expression for rhs argument to multiply");
+            }
+            return new MultNode((ExpressionNode) node, (ExpressionNode) rhs);
         }
     }
 
@@ -330,7 +366,13 @@ public class CalculatorParser {
         @Override
         public Parser.Node parse(final Parser.Node node, final Lexer.Token token, final Parser parser, final Lexer lexer) {
             Parser.Node rhs = parser.parse(lexer, PrecedencePairs.MULT_DIV.getRight());
-            return new DivideNode(node, rhs);
+            if (!(node instanceof ExpressionNode)) {
+                throw new IllegalStateException("Must provide an expression for lhs argument to divide");
+            }
+            if (!(rhs instanceof ExpressionNode)) {
+                throw new IllegalStateException("Must provide an expression for rhs argument to divide");
+            }
+            return new DivideNode((ExpressionNode) node, (ExpressionNode) rhs);
         }
     }
 
@@ -339,7 +381,13 @@ public class CalculatorParser {
         @Override
         public Parser.Node parse(final Parser.Node node, final Lexer.Token token, final Parser parser, final Lexer lexer) {
             Parser.Node rhs = parser.parse(lexer, PrecedencePairs.ASSIGNMENT.getRight());
-            return new AssignmentNode(node, rhs);
+            if (!(node instanceof ExpressionNode)) {
+                throw new IllegalStateException("Must provide an expression for lhs argument to assignment");
+            }
+            if (!(rhs instanceof ExpressionNode)) {
+                throw new IllegalStateException("Must provide an expression for rhs argument to assignment");
+            }
+            return new AssignmentNode((ExpressionNode) node, (ExpressionNode) rhs);
         }
     }
 

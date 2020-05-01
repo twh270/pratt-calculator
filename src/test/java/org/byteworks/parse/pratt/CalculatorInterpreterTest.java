@@ -116,7 +116,7 @@ class CalculatorInterpreterTest {
     @Test
     void interpretsPostIncrementNumber() {
         String result = execute("4++");
-        assertEquals("5: NUMBER\n", result);
+        assertEquals("4: NUMBER\n", result);
     }
 
     @Test
@@ -129,7 +129,7 @@ class CalculatorInterpreterTest {
     @Test
     void interpretsPostDecrementNumber() {
         String result = execute("4--");
-        assertEquals("3: NUMBER\n", result);
+        assertEquals("4: NUMBER\n", result);
     }
 
     @Test
@@ -142,7 +142,7 @@ class CalculatorInterpreterTest {
     @Test
     void interpretsPostIncrementPrecedence() {
         String result = execute("x = 3\n2+++x");
-        assertEquals("3: NUMBER\n6: NUMBER\n", result);
+        assertEquals("3: NUMBER\n5: NUMBER\n", result);
         assertEquals("3: NUMBER", testObj.getVariable("x").toString());
     }
 
