@@ -86,7 +86,7 @@ class CalculatorInterpreterTest {
 
     @Test
     void executesFunctionDefinition() {
-        String result = execute("f = fn x:Number y:Number -> Number { x + y }\nf(3, 4)");
+        String result = execute("f = fn x:Number y:Number -> Number { x + y }\nf 3 4");
         Type number = testObj.interpreter.getType("Number");
         Function fn = testObj.interpreter.getFunction("f", new TypeList(List.of(number, number)));
         assertEquals("(Number, Number -> Number)", fn.getSignature().toString());
