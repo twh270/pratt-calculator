@@ -1,7 +1,6 @@
 package org.byteworks.xl;
 
 import java.io.PrintStream;
-import java.util.Collections;
 import java.util.List;
 import java.util.Stack;
 import java.util.stream.Collectors;
@@ -170,33 +169,6 @@ public class CalculatorInterpreter {
         }
         // TODO type of value should be Function
         return new Value(new Function(new FunctionSignature(functionParameters, returnType), new InterpretedFunction(functionDeclaration.getBody())), null);
-    }
-
-    private Value functionDeclaration1(CalculatorParser.FunctionDeclarationNode functionDefinition) {
-        CalculatorParser.ProducesNode signature = functionDefinition.getTypeSignature();
-        Node left = signature.getLeft();
-        List<CalculatorParser.TypeExpressionNode> paramList = Collections.emptyList();
-        if (left instanceof CalculatorParser.CommaNode) {
-            CalculatorParser.CommaNode params = (CalculatorParser.CommaNode) left;
-            paramList = List.of((CalculatorParser.TypeExpressionNode)params.getLeft(), (CalculatorParser.TypeExpressionNode)params.getRight());
-        }
-        // TODO handle a single parameter
-        List<FunctionParameter> functionParameters =
-                paramList.stream()
-                        .map(it -> new FunctionParameter(
-                            it.getTarget().getChars(),
-                            interpreter.getType(it.getTypeExpression().getChars()))
-                        )
-                        .collect(Collectors.toList());
-        List<Type> paramTypes = paramList.stream()
-                .map(CalculatorParser.TypeExpressionNode::getTypeExpression)
-                .map(it -> it.getChars())
-                .map(interpreter::getType)
-                .collect(Collectors.toList());
-        Type parameterType = new TypeList(paramTypes);
-        // TODO handle compound return type
-        Type returnType = interpreter.getType(((CalculatorParser.IdentifierNode) signature.getRight()).getChars());
-        return new Value(new Function(new FunctionSignature(functionParameters, returnType), new InterpretedFunction(functionDefinition.getBody())), parameterType);
     }
 
     private Value binaryOperatorExpression(final CalculatorParser.BinaryOpNode binaryOp) {

@@ -45,14 +45,14 @@ public class CalculatorParser {
         PLUSPLUS(TokenType.PLUSPLUS, PrecedencePairs.POST_INCREMENT, new PlusPlusPrefixParser(), new PlusPlusInfixParser()),
         MINUSMINUS(TokenType.MINUSMINUS, PrecedencePairs.POST_DECREMENT, new MinusMinusPrefixParser(), new MinusMinusInfixParser()),
         COMMA(TokenType.COMMA, PrecedencePairs.COMMA, null, new CommaInfixParser()),
-        ARROW(TokenType.ARROW, PrecedencePairs.ARROW, null, new ArrowInfixParser()),
-        COLON(TokenType.COLON, PrecedencePairs.COLON, null, new ColonInfixParser()),
+        ARROW(TokenType.ARROW, PrecedencePairs.ARROW, null, null/*new ArrowInfixParser()*/),
+        COLON(TokenType.COLON, PrecedencePairs.COLON, null, null/*new ColonInfixParser()*/),
         EOF(TokenType.EOF, PrecedencePairs.EOF, new EofPrefixParser(), null),
         NUMBER(TokenType.NUMBER, null, new NumberPrefixParser(), null),
         LPAREN(TokenType.LPAREN, null, new LParenPrefixParser(), null),
-        IDENTIFIER(TokenType.IDENTIFIER, PrecedencePairs.IDENTIFIER, new IdentifierPrefixParser(), new IdentifierInfixParser()),
+        IDENTIFIER(TokenType.IDENTIFIER, PrecedencePairs.IDENTIFIER, new IdentifierPrefixParser(), null/*new IdentifierInfixParser()*/),
         EOL(TokenType.EOL, PrecedencePairs.EOL, new EndOfLinePrefixParser(), null),
-        FUNCTION_DEFINITION(TokenType.FUNCTION_DEFINITION, null, new FunctionDefinitionPrefixParser_new(), null),
+        FUNCTION_DEFINITION(TokenType.FUNCTION_DEFINITION, null, new FunctionDefinitionPrefixParser(), null),
         LBRACE(TokenType.LBRACE, PrecedencePairs.BRACES, new LeftBracePrefixParser(), null),
         RPAREN(TokenType.RPAREN, PrecedencePairs.PARENS, null, null),
         RBRACE(TokenType.RBRACE, PrecedencePairs.BRACES, null, null);
@@ -210,7 +210,7 @@ public class CalculatorParser {
             this.chars = chars;
         }
 
-        public String getChars() {
+        String getChars() {
             return chars;
         }
 
@@ -224,16 +224,16 @@ public class CalculatorParser {
         private final Node left;
         private final Node right;
 
-        public CommaNode(final Node left, final Node right) {
+        CommaNode(final Node left, final Node right) {
             this.left = left;
             this.right = right;
         }
 
-        public Node getLeft() {
+        Node getLeft() {
             return left;
         }
 
-        public Node getRight() {
+        Node getRight() {
             return right;
         }
 
@@ -247,17 +247,9 @@ public class CalculatorParser {
         private final Node left;
         private final Node right;
 
-        public ProducesNode(final Node left, final Node right) {
+        ProducesNode(final Node left, final Node right) {
             this.left = left;
             this.right = right;
-        }
-
-        public Node getLeft() {
-            return left;
-        }
-
-        public Node getRight() {
-            return right;
         }
 
         @Override
@@ -273,7 +265,7 @@ public class CalculatorParser {
             this.list = list;
         }
 
-        public List<ExpressionNode> getList() {
+        List<ExpressionNode> getList() {
             return list;
         }
 
@@ -285,36 +277,24 @@ public class CalculatorParser {
 
     static class FunctionDeclarationNode extends ExpressionNode {
         private final FunctionSignatureNode functionSignature;
-        private final ProducesNode typeSignature;
         private final ExpressionNode body;
 
         FunctionDeclarationNode(final FunctionSignatureNode functionSignature, final ExpressionNode body) {
             this.functionSignature = functionSignature;
-            this.typeSignature = null;
             this.body = body;
         }
 
-        FunctionDeclarationNode(final ProducesNode typeSignature, final ExpressionNode body) {
-            this.functionSignature = null;
-            this.typeSignature = typeSignature;
-            this.body = body;
-        }
-
-        public ProducesNode getTypeSignature() {
-            return typeSignature;
-        }
-
-        public ExpressionNode getBody() {
+        ExpressionNode getBody() {
             return body;
         }
 
-        public FunctionSignatureNode getFunctionSignature() {
+        FunctionSignatureNode getFunctionSignature() {
             return functionSignature;
         }
 
         @Override
         public String toString() {
-            return "fn " + (typeSignature == null ? functionSignature : typeSignature) + " " + body;
+            return "fn " + functionSignature + " " + body;
         }
     }
 
@@ -327,11 +307,11 @@ public class CalculatorParser {
             this.arguments = arguments;
         }
 
-        public String getChars() {
+        String getChars() {
             return chars;
         }
 
-        public Node getArguments() {
+        Node getArguments() {
             return arguments;
         }
 
@@ -350,17 +330,41 @@ public class CalculatorParser {
             typeExpression = expression;
         }
 
-        public IdentifierNode getTarget() {
+        IdentifierNode getTarget() {
             return target;
         }
 
-        public IdentifierNode getTypeExpression() {
+        IdentifierNode getTypeExpression() {
             return typeExpression;
         }
 
         @Override
         public String toString() {
             return target + ":" + typeExpression;
+        }
+    }
+
+    static class FunctionSignatureNode extends ExpressionNode {
+        private final List<TypeExpressionNode> parameterTypes;
+        private final List<IdentifierNode> returnTypes;
+
+        FunctionSignatureNode(final List<TypeExpressionNode> parameterTypes, final List<IdentifierNode> returnTypes) {
+            this.parameterTypes = parameterTypes;
+            this.returnTypes = returnTypes;
+        }
+
+        List<TypeExpressionNode> getParameterTypes() {
+            return parameterTypes;
+        }
+
+        List<IdentifierNode> getReturnTypes() {
+            return returnTypes;
+        }
+
+        @Override
+        public String toString() {
+            return parameterTypes.stream().map(Object::toString).collect(Collectors.joining(" ")) + " -> " +
+                    returnTypes.stream().map(Object::toString).collect(Collectors.joining(" "));
         }
     }
 
@@ -461,8 +465,7 @@ public class CalculatorParser {
         }
     }
 
-    // fn x:Number y:Number -> Number { x * y * 2 }
-    static class FunctionDefinitionPrefixParser_new implements PrefixParser {
+    static class FunctionDefinitionPrefixParser implements PrefixParser {
 
         @Override
         public Node parse(final Token token, final Parser parser, final Lexer lexer) {
@@ -507,51 +510,6 @@ public class CalculatorParser {
             }
             IdentifierNode type = (IdentifierNode) node;
             return new TypeExpressionNode(target, type);
-        }
-    }
-
-    static class FunctionSignatureNode extends ExpressionNode {
-        private final List<TypeExpressionNode> parameterTypes;
-        private final List<IdentifierNode> returnTypes;
-
-        FunctionSignatureNode(final List<TypeExpressionNode> parameterTypes, final List<IdentifierNode> returnTypes) {
-            this.parameterTypes = parameterTypes;
-            this.returnTypes = returnTypes;
-        }
-
-        public List<TypeExpressionNode> getParameterTypes() {
-            return parameterTypes;
-        }
-
-        public List<IdentifierNode> getReturnTypes() {
-            return returnTypes;
-        }
-
-        @Override
-        public String toString() {
-            return parameterTypes.stream().map(Object::toString).collect(Collectors.joining(" ")) + " -> " +
-                    returnTypes.stream().map(Object::toString).collect(Collectors.joining(" "));
-        }
-    }
-
-    //
-    static class FunctionDefinitionPrefixParser implements PrefixParser {
-
-        @Override
-        public Node parse(final Token token, final Parser parser, final Lexer lexer) {
-            if (lexer.peek().getType() != TokenType.LPAREN) {
-                throw new IllegalStateException("A function definition must begin with a type signature beginning with '('");
-            }
-            Node node = parser.parse(lexer, PrecedencePairs.PARENS.getRight());
-            if (!(node instanceof ProducesNode)) {
-                throw new IllegalStateException("A function definition must have a type signature of the form ([t1][,t2]*->t)");
-            }
-            ProducesNode typeSignature = (ProducesNode) node;
-            Node body = parser.parse(lexer, 0);
-            if (!(body instanceof ExpressionNode)) {
-                throw new IllegalStateException("Function body must be an expression but was " + body);
-            }
-            return new FunctionDeclarationNode(typeSignature, (ExpressionNode) body);
         }
     }
 
