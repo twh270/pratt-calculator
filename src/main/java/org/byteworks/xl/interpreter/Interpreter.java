@@ -11,28 +11,24 @@ import java.util.Stack;
 
 public class Interpreter {
     private final Map<String, Value> heap = new HashMap<>();
-    private final Map<String, Map<FunctionSignature, FunctionDefinition>> functions = new HashMap<>();
+    private final Map<String, Map<Type, Function>> functions = new HashMap<>();
     private final Stack<Value> stack = new Stack<>();
     private final Map<String, Type> types = new HashMap<>();
 
-    public FunctionDefinition registerFunctionDefinition(String name, Type parameterType, Type returnType, FunctionImplementation<Stack<Value>, Value> impl) {
-        FunctionDefinition def = new FunctionDefinition(name, parameterType, returnType, impl);
-        Map<FunctionSignature, FunctionDefinition> bound = functions.get(name);
-        if (bound == null) {
-            bound = new HashMap<>();
-            functions.put(name, bound);
-        }
-        bound.put(def.getSignature(), def);
-        return def;
+    public Function registerFunction(String name, List<FunctionParameter> functionParameters, Type returnType, FunctionImplementation impl) {
+        Function function = new Function(new FunctionSignature(functionParameters, returnType), impl);
+        Map<Type, Function> bound = functions.computeIfAbsent(name, k -> new HashMap<>());
+        bound.put(function.getSignature().getParameterType(), function);
+        return function;
     }
 
-    public FunctionDefinition getFunctionDefinition(final String name, final FunctionSignature signature) {
-        Map<FunctionSignature, FunctionDefinition> bound = functions.get(name);
-        FunctionDefinition functionDefinition = bound.get(signature);
-        if (functionDefinition == null) {
-            throw new IllegalArgumentException("Could not find function definition for function name '" + name + "' with signature '" + signature + "'");
+    public Function getFunction(final String name, final Type parameterType) {
+        Map<Type, Function> bound = functions.get(name);
+        Function function = bound.get(parameterType);
+        if (function == null) {
+            throw new IllegalArgumentException("Could not find function named '" + name + "' with parameter(s) '" + parameterType + "'");
         }
-        return functionDefinition;
+        return function;
     }
 
     public void registerType(final String name, final Type type) {
@@ -55,9 +51,9 @@ public class Interpreter {
         heap.put(identifierName, value);
     }
 
-    public Value callFunction(FunctionDefinition function, List<Value> arguments) {
+    public Value callFunction(Function function, List<Value> arguments) {
         arguments.forEach(stack::push);
-        return function.execute(stack);
+        return function.invoke(stack);
     }
 
     public Value identifier(String identifierName) {

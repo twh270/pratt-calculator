@@ -4,9 +4,9 @@ import java.util.Stack;
 
 public class Function {
     private final FunctionSignature signature;
-    private final FunctionImplementation<Stack<Value>, Value> impl;
+    private final FunctionImplementation impl;
 
-    public Function(final FunctionSignature signature, final FunctionImplementation<Stack<Value>, Value> impl) {
+    public Function(final FunctionSignature signature, final FunctionImplementation impl) {
         this.signature = signature;
         this.impl = impl;
     }
@@ -15,7 +15,16 @@ public class Function {
         return signature;
     }
 
-    public FunctionImplementation<Stack<Value>, Value> getImpl() {
+    public FunctionImplementation getImpl() {
         return impl;
+    }
+
+    public Value invoke(final Stack<Value> values) {
+        return impl.invoke(signature, values);
+    }
+
+    @Override
+    public String toString() {
+        return signature.toString();
     }
 }

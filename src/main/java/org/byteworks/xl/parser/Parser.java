@@ -38,9 +38,6 @@ public class Parser {
         List<Node> nodes = new ArrayList<>();
         while(lexer.hasMoreTokens()) {
             nodes.add(parse(lexer, 0));
-            if (nodes.size() > 3) {
-                throw new IllegalStateException("We don't want many lines yet -- blow up to avoid having to kill the VM");
-            }
         }
         return nodes;
     }

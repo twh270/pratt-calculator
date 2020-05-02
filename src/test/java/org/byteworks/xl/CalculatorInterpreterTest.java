@@ -6,8 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.List;
 
-import org.byteworks.xl.interpreter.FunctionDefinition;
-import org.byteworks.xl.interpreter.FunctionSignature;
+import org.byteworks.xl.interpreter.Function;
 import org.byteworks.xl.interpreter.Type;
 import org.byteworks.xl.interpreter.TypeList;
 import org.byteworks.xl.lexer.Lexer;
@@ -80,8 +79,17 @@ class CalculatorInterpreterTest {
     void interpretsFunctionDefinition() {
         String result = execute("f = fn(x:Number, y:Number -> Number) { x + y }");
         Type number = testObj.interpreter.getType("Number");
-        FunctionDefinition fn = testObj.interpreter.getFunctionDefinition("f", new FunctionSignature( new TypeList(List.of(number, number)), number));
+        Function fn = testObj.interpreter.getFunction("f", new TypeList(List.of(number, number)));
         assertEquals("(Number, Number -> Number)", fn.getSignature().toString());
-        assertEquals("f = fn(Number, Number -> Number): (Number, Number -> Number)\n", result);
+        assertEquals("(Number, Number -> Number): Number, Number\n", result);
+    }
+
+    @Test
+    void executesFunctionDefinition() {
+        String result = execute("f = fn(x:Number, y:Number -> Number) { x + y }\nf(3, 4)");
+        Type number = testObj.interpreter.getType("Number");
+        Function fn = testObj.interpreter.getFunction("f", new TypeList(List.of(number, number)));
+        assertEquals("(Number, Number -> Number)", fn.getSignature().toString());
+        assertEquals("(Number, Number -> Number): Number, Number\n7: Number\n", result);
     }
 }

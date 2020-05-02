@@ -1,5 +1,9 @@
 package org.byteworks.xl;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.byteworks.xl.lexer.Lexer;
 import org.byteworks.xl.lexer.Token;
 import org.byteworks.xl.lexer.TokenType;
@@ -260,19 +264,19 @@ public class CalculatorParser {
     }
 
     static class ExpressionListNode extends ExpressionNode {
-        private final Node list;
+        private final List<ExpressionNode> list;
 
-        ExpressionListNode(final Node list) {
+        ExpressionListNode(final List<ExpressionNode> list) {
             this.list = list;
         }
 
-        public Node getList() {
+        public List<ExpressionNode> getList() {
             return list;
         }
 
         @Override
         public String toString() {
-            return "{ " + list.toString() + " }";
+            return "{ " + list.stream().map(Object::toString).collect(Collectors.joining(",")) + " }";
         }
     }
 
@@ -323,19 +327,19 @@ public class CalculatorParser {
     }
 
     static class TypeExpressionNode extends ExpressionNode {
-        private final Node target;
-        private final Node typeExpression;
+        private final IdentifierNode target;
+        private final IdentifierNode typeExpression;
 
-        TypeExpressionNode(final Node target, final Node expression) {
+        TypeExpressionNode(final IdentifierNode target, final IdentifierNode expression) {
             this.target = target;
             typeExpression = expression;
         }
 
-        public Node getTarget() {
+        public IdentifierNode getTarget() {
             return target;
         }
 
-        public Node getTypeExpression() {
+        public IdentifierNode getTypeExpression() {
             return typeExpression;
         }
 
@@ -466,12 +470,16 @@ public class CalculatorParser {
 
         @Override
         public Node parse(final Token token, final Parser parser, final Lexer lexer) {
-            Node list = parser.parse(lexer, PrecedencePairs.BRACES.getRight());
-            Token tok = lexer.next();
-            if (!(tok.getType() == TokenType.RBRACE)) {
-                throw new IllegalStateException("Expected a right brace but got " + tok);
+            List<ExpressionNode> nodes = new ArrayList<>();
+            while (lexer.peek().getType() != TokenType.RBRACE) {
+                Node node = parser.parse(lexer, 0);
+                if (!(node instanceof ExpressionNode)) {
+                    throw new IllegalStateException("All elements of an expression list enclosed by { } must be an expression, but '" + node + "' is not");
+                }
+                nodes.add((ExpressionNode) node);
             }
-            return new ExpressionListNode(list);
+            lexer.next();
+            return new ExpressionListNode(nodes);
         }
     }
 
@@ -594,8 +602,14 @@ public class CalculatorParser {
 
         @Override
         public Node parse(final Node node, final org.byteworks.xl.parser.Parser parser, final Lexer lexer) {
-            Node typeExpression = parser.parse(lexer, PrecedencePairs.COLON.getRight());
-            return new TypeExpressionNode(node, typeExpression);
+            if (!(node instanceof IdentifierNode)) {
+                throw new IllegalStateException("Must provide an identifier as target of a type expression, but was " + node);
+            }
+            Node type = parser.parse(lexer, PrecedencePairs.COLON.getRight());
+            if (!(type instanceof IdentifierNode)) {
+                throw new IllegalStateException("Must provide an identifier as type of a type expression, but was " + node);
+            }
+            return new TypeExpressionNode((IdentifierNode) node, (IdentifierNode) type);
         }
     }
 

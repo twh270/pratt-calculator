@@ -7,8 +7,8 @@ import java.util.Stack;
 import java.util.stream.Collectors;
 
 import org.byteworks.xl.interpreter.Function;
-import org.byteworks.xl.interpreter.FunctionDefinition;
 import org.byteworks.xl.interpreter.FunctionImplementation;
+import org.byteworks.xl.interpreter.FunctionParameter;
 import org.byteworks.xl.interpreter.FunctionSignature;
 import org.byteworks.xl.interpreter.Interpreter;
 import org.byteworks.xl.interpreter.SimpleType;
@@ -19,9 +19,8 @@ import org.byteworks.xl.parser.Node;
 
 public class CalculatorInterpreter {
     private static final String TYPE_NUMBER = "Number";
-    private static final String TYPE_TWO_NUMBERS = "TwoNumbers";
 
-    class InterpretedFunction implements FunctionImplementation<Stack<Value>, Value> {
+    class InterpretedFunction implements FunctionImplementation {
         private final CalculatorParser.ExpressionNode expression;
 
         InterpretedFunction(final CalculatorParser.ExpressionNode expression) {
@@ -29,53 +28,59 @@ public class CalculatorInterpreter {
         }
 
         @Override
-        public Value apply(final Stack<Value> values) {
+        public Value invoke(final FunctionSignature signature, final Stack<Value> stack) {
+            final List<FunctionParameter> parameters = signature.getFunctionParameters();
+            for (FunctionParameter param : parameters) {
+                Value value = stack.pop();
+                checkType(value.getType(), param.getType(), "Parameter " + param.getName() + " requires a " + param.getType() + " but a " + value.getType() + " was supplied");
+                interpreter.assignVariableValue(param.getName(), value);
+            }
             return evaluateExpression(expression);
         }
     }
 
     final Interpreter interpreter = new Interpreter();
 
-    private final FunctionImplementation<Stack<Value>, Value> numericAddition = stack -> {
+    private final FunctionImplementation numericAddition = (signature, stack) -> {
         Type number = interpreter.getType(TYPE_NUMBER);
         Long leftValue = popValue(stack, number, "binary addition left operand expected %s but got %s");
         Long rightValue = popValue(stack, number, "binary addition right operand expected %s but got %s");
         return new Value(leftValue + rightValue, interpreter.getType(TYPE_NUMBER));
     };
-    private final FunctionImplementation<Stack<Value>, Value> numericSubtraction = stack -> {
+    private final FunctionImplementation numericSubtraction = (signature, stack) -> {
         Type number = interpreter.getType(TYPE_NUMBER);
         Long leftValue = popValue(stack, number, "binary subtraction left operand expected %s but got %s");
         Long rightValue = popValue(stack, number, "binary subtraction right operand expected %s but got %s");
         return new Value(leftValue - rightValue, interpreter.getType(TYPE_NUMBER));
     };
-    private final FunctionImplementation<Stack<Value>, Value> numericMultiplication = stack -> {
+    private final FunctionImplementation numericMultiplication = (signature, stack) -> {
         Type number = interpreter.getType(TYPE_NUMBER);
         Long leftValue = popValue(stack, number, "binary multiplication left operand expected %s but got %s");
         Long rightValue = popValue(stack, number, "binary multiplication right operand expected %s but got %s");
         return new Value(leftValue * rightValue, interpreter.getType(TYPE_NUMBER));
     };
-    private final FunctionImplementation<Stack<Value>, Value> numericDivision = stack -> {
+    private final FunctionImplementation numericDivision = (signature, stack) -> {
         Type number = interpreter.getType(TYPE_NUMBER);
         Long leftValue = popValue(stack, number, "binary division left operand expected %s but got %s");
         Long rightValue = popValue(stack, number, "binary division right operand expected %s but got %s");
         return new Value(leftValue / rightValue, interpreter.getType(TYPE_NUMBER));
     };
-    private final FunctionImplementation<Stack<Value>, Value> preIncrement = stack -> {
+    private final FunctionImplementation preIncrement = (signature, stack) -> {
         Type number = interpreter.getType(TYPE_NUMBER);
         Long operand = popValue(stack, number, "pre-increment operand expected %s but got %s");
         return new Value(operand + 1, interpreter.getType(TYPE_NUMBER));
     };
-    private final FunctionImplementation<Stack<Value>, Value> preDecrement = stack -> {
+    private final FunctionImplementation preDecrement = (signature, stack) -> {
         Type number = interpreter.getType(TYPE_NUMBER);
         Long operand = popValue(stack, number, "pre-decrement operand expected %s but got %s");
         return new Value(operand - 1, interpreter.getType(TYPE_NUMBER));
     };
-    private final FunctionImplementation<Stack<Value>, Value> postIncrement = stack -> {
+    private final FunctionImplementation postIncrement = (signature, stack) -> {
         Type number = interpreter.getType(TYPE_NUMBER);
         Long operand = popValue(stack, number, "post-increment operand expected %s but got %s");
         return new Value(operand + 1, interpreter.getType(TYPE_NUMBER));
     };
-    private final FunctionImplementation<Stack<Value>, Value> postDecrement = stack -> {
+    private final FunctionImplementation postDecrement = (signature, stack) -> {
         Type number = interpreter.getType(TYPE_NUMBER);
         Long operand = popValue(stack, number, "post-decrement operand expected %s but got %s");
         return new Value(operand - 1, interpreter.getType(TYPE_NUMBER));
@@ -83,17 +88,17 @@ public class CalculatorInterpreter {
 
     public CalculatorInterpreter() {
         Type number = new SimpleType(TYPE_NUMBER);
-        interpreter.registerType(TYPE_NUMBER, number);
-        Type twoNumbers = new TypeList(List.of(interpreter.getType(TYPE_NUMBER), interpreter.getType(TYPE_NUMBER)));
-        interpreter.registerType(TYPE_TWO_NUMBERS, twoNumbers);
-        interpreter.registerFunctionDefinition("add", twoNumbers, number, numericAddition);
-        interpreter.registerFunctionDefinition("subtract", twoNumbers, number, numericSubtraction);
-        interpreter.registerFunctionDefinition("multiply", twoNumbers, number, numericMultiplication);
-        interpreter.registerFunctionDefinition("divide", twoNumbers, number, numericDivision);
-        interpreter.registerFunctionDefinition("preincrement", number, number, preIncrement);
-        interpreter.registerFunctionDefinition("predecrement", number, number, preDecrement);
-        interpreter.registerFunctionDefinition("postincrement", number, number, postIncrement);
-        interpreter.registerFunctionDefinition("postdecrement", number, number, postDecrement);
+        interpreter.registerType(TYPE_NUMBER, new SimpleType(TYPE_NUMBER));
+        List<FunctionParameter> twoNumbers = List.of(new FunctionParameter("x", interpreter.getType(TYPE_NUMBER)), new FunctionParameter("y", interpreter.getType(TYPE_NUMBER)));
+        List<FunctionParameter> oneNumber = List.of(new FunctionParameter("x", interpreter.getType(TYPE_NUMBER)));
+        interpreter.registerFunction("add", twoNumbers, number, numericAddition);
+        interpreter.registerFunction("subtract", twoNumbers, number, numericSubtraction);
+        interpreter.registerFunction("multiply", twoNumbers, number, numericMultiplication);
+        interpreter.registerFunction("divide", twoNumbers, number, numericDivision);
+        interpreter.registerFunction("preincrement", oneNumber, number, preIncrement);
+        interpreter.registerFunction("predecrement", oneNumber, number, preDecrement);
+        interpreter.registerFunction("postincrement", oneNumber, number, postIncrement);
+        interpreter.registerFunction("postdecrement", oneNumber, number, postDecrement);
     }
 
     public void exec(List<Node> nodes, PrintStream ps) {
@@ -117,8 +122,33 @@ public class CalculatorInterpreter {
             return binaryOperatorExpression((CalculatorParser.BinaryOpNode) expression);
         } else if (expression instanceof CalculatorParser.FunctionDeclarationNode) {
             return functionDeclaration((CalculatorParser.FunctionDeclarationNode) expression);
+        } else if (expression instanceof CalculatorParser.FunctionCallNode) {
+            return callFunction((CalculatorParser.FunctionCallNode) expression);
+        } else if (expression instanceof CalculatorParser.ExpressionListNode) {
+            return expressionList((CalculatorParser.ExpressionListNode) expression);
         }
         throw new IllegalStateException("Don't know how to evaluate expression " + expression);
+    }
+
+    private Value expressionList(final CalculatorParser.ExpressionListNode expressionList) {
+        Value result = null;
+        for(CalculatorParser.ExpressionNode expression: expressionList.getList()) {
+            result = evaluateExpression(expression);
+        }
+        return result;
+    }
+
+    private Value callFunction(final CalculatorParser.FunctionCallNode functionCall) {
+        String functionName = functionCall.getChars();
+        if (functionCall.getArguments() instanceof CalculatorParser.CommaNode) {
+            CalculatorParser.CommaNode arguments = (CalculatorParser.CommaNode) functionCall.getArguments();
+            Value first = evaluateExpression((CalculatorParser.ExpressionNode) arguments.getLeft());
+            Value second = evaluateExpression((CalculatorParser.ExpressionNode) arguments.getRight());
+            Type parameterType = new TypeList(List.of(first.getType(), second.getType()));
+            Function function = interpreter.getFunction(functionName, parameterType);
+            return interpreter.callFunction(function, List.of(first, second));
+        }
+        throw new IllegalStateException("Don't know how to call function " + functionCall);
     }
 
     private Value functionDeclaration(CalculatorParser.FunctionDeclarationNode functionDefinition) {
@@ -130,16 +160,22 @@ public class CalculatorInterpreter {
             paramList = List.of((CalculatorParser.TypeExpressionNode)params.getLeft(), (CalculatorParser.TypeExpressionNode)params.getRight());
         }
         // TODO handle a single parameter
+        List<FunctionParameter> functionParameters =
+                paramList.stream()
+                        .map(it -> new FunctionParameter(
+                            it.getTarget().getChars(),
+                            interpreter.getType(it.getTypeExpression().getChars()))
+                        )
+                        .collect(Collectors.toList());
         List<Type> paramTypes = paramList.stream()
                 .map(CalculatorParser.TypeExpressionNode::getTypeExpression)
-                .map(it -> ((CalculatorParser.IdentifierNode) it).getChars())
+                .map(it -> it.getChars())
                 .map(interpreter::getType)
                 .collect(Collectors.toList());
         Type parameterType = new TypeList(paramTypes);
         // TODO handle compound return type
         Type returnType = interpreter.getType(((CalculatorParser.IdentifierNode) signature.getRight()).getChars());
-        FunctionSignature functionSignature = new FunctionSignature(parameterType, returnType);
-        return new Value(new Function(new FunctionSignature(parameterType, returnType), new InterpretedFunction(functionDefinition.getBody())), functionSignature);
+        return new Value(new Function(new FunctionSignature(functionParameters, returnType), new InterpretedFunction(functionDefinition.getBody())), parameterType);
     }
 
     private Value binaryOperatorExpression(final CalculatorParser.BinaryOpNode binaryOp) {
@@ -172,25 +208,24 @@ public class CalculatorInterpreter {
             Function function = (Function) value.getValue();
             String functionName = identifierNode.getChars();
             FunctionSignature signature = function.getSignature();
-            value = new Value(interpreter.registerFunctionDefinition(functionName, signature.getParameterType(), signature.getReturnType(), function.getImpl()), function.getSignature());
+            value = new Value(interpreter.registerFunction(functionName, function.getSignature().getFunctionParameters(), signature.getReturnType(), function.getImpl()),
+                    function.getSignature().getParameterType());
         }
         interpreter.assignVariableValue(identifierNode.getChars(), value);
         return value;
     }
 
     private Value callBinaryNumericFunction(final Value left, final Value right, final String name) {
-        FunctionDefinition fn = getFunction(name, TYPE_TWO_NUMBERS, TYPE_NUMBER);
+        Type num = interpreter.getType(TYPE_NUMBER);
+        Type binaryFunctionParameterType = new TypeList(List.of(num, num));
+        Function fn = interpreter.getFunction(name, binaryFunctionParameterType);
         return interpreter.callFunction(fn, List.of(right, left));
     }
 
     private Value callUnaryNumericFunction(final Value arg, final String name) {
-        FunctionDefinition fn = getFunction(name, TYPE_NUMBER, TYPE_NUMBER);
+        Type num = interpreter.getType(TYPE_NUMBER);
+        Function fn = interpreter.getFunction(name, num);
         return interpreter.callFunction(fn, List.of(arg));
-    }
-
-    private FunctionDefinition getFunction(String name, String parameterType, String returnType) {
-        FunctionSignature signature = new FunctionSignature(interpreter.getType(parameterType), interpreter.getType(returnType));
-        return interpreter.getFunctionDefinition(name, signature);
     }
 
     private void checkType(Type type, Type expected, String error) {
