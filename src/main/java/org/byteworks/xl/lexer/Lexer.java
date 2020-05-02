@@ -1,5 +1,6 @@
 package org.byteworks.xl.lexer;
 
+// TODO consumeIf(TokenType t) peeks and consumes iff token type is t and returns boolean
 public class Lexer {
     private final String input;
     private int pos;

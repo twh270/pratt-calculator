@@ -13,6 +13,8 @@ import org.byteworks.xl.parser.Pair;
 import org.byteworks.xl.parser.Parser;
 import org.byteworks.xl.parser.PrefixParser;
 
+// TODO a require(TokenType[, TokenType]) method to expect a next token type
+// TODO normalize error messages
 public class CalculatorParser {
 
     static class PrecedencePairs {
@@ -31,6 +33,7 @@ public class CalculatorParser {
         static final Pair<Integer, Integer> POST_INCREMENT = new Pair<>(11, null);
         static final Pair<Integer, Integer> POST_DECREMENT = new Pair<>(11, null);
         static final Pair<Integer, Integer> COLON = new Pair<>(11, 12);
+        static final Pair<Integer, Integer> IDENTIFIER = new Pair<>(11, 12);
     }
 
     private enum ParserRule {
@@ -47,9 +50,9 @@ public class CalculatorParser {
         EOF(TokenType.EOF, PrecedencePairs.EOF, new EofPrefixParser(), null),
         NUMBER(TokenType.NUMBER, null, new NumberPrefixParser(), null),
         LPAREN(TokenType.LPAREN, null, new LParenPrefixParser(), null),
-        IDENTIFIER(TokenType.IDENTIFIER, null, new IdentifierPrefixParser(), null),
+        IDENTIFIER(TokenType.IDENTIFIER, PrecedencePairs.IDENTIFIER, new IdentifierPrefixParser(), new IdentifierInfixParser()),
         EOL(TokenType.EOL, PrecedencePairs.EOL, new EndOfLinePrefixParser(), null),
-        FUNCTION_DEFINITION(TokenType.FUNCTION_DEFINITION, null, new FunctionDefinitionPrefixParser(), null),
+        FUNCTION_DEFINITION(TokenType.FUNCTION_DEFINITION, null, new FunctionDefinitionPrefixParser_new(), null),
         LBRACE(TokenType.LBRACE, PrecedencePairs.BRACES, new LeftBracePrefixParser(), null),
         RPAREN(TokenType.RPAREN, PrecedencePairs.PARENS, null, null),
         RBRACE(TokenType.RBRACE, PrecedencePairs.BRACES, null, null);
@@ -281,10 +284,18 @@ public class CalculatorParser {
     }
 
     static class FunctionDeclarationNode extends ExpressionNode {
+        private final FunctionSignatureNode functionSignature;
         private final ProducesNode typeSignature;
         private final ExpressionNode body;
 
+        FunctionDeclarationNode(final FunctionSignatureNode functionSignature, final ExpressionNode body) {
+            this.functionSignature = functionSignature;
+            this.typeSignature = null;
+            this.body = body;
+        }
+
         FunctionDeclarationNode(final ProducesNode typeSignature, final ExpressionNode body) {
+            this.functionSignature = null;
             this.typeSignature = typeSignature;
             this.body = body;
         }
@@ -297,9 +308,13 @@ public class CalculatorParser {
             return body;
         }
 
+        public FunctionSignatureNode getFunctionSignature() {
+            return functionSignature;
+        }
+
         @Override
         public String toString() {
-            return "fn" + typeSignature + " " + body;
+            return "fn " + (typeSignature == null ? functionSignature : typeSignature) + " " + body;
         }
     }
 
@@ -446,6 +461,80 @@ public class CalculatorParser {
         }
     }
 
+    // fn x:Number y:Number -> Number { x * y * 2 }
+    static class FunctionDefinitionPrefixParser_new implements PrefixParser {
+
+        @Override
+        public Node parse(final Token token, final Parser parser, final Lexer lexer) {
+            List<TypeExpressionNode> parameterTypes = new ArrayList<>();
+            while (lexer.peek().getType() != TokenType.ARROW) {
+                // TODO maybe param and return type is an infix parser on COLON and we expect parse(lexer, 0) to return a TypeExpressionNode
+                TypeExpressionNode typeExpressionNode = parseTypeExpression(parser, lexer);
+                parameterTypes.add(typeExpressionNode);
+            }
+            lexer.next();
+            List<IdentifierNode> returnTypes = new ArrayList<>();
+            TokenType next = lexer.peek().getType();
+            while (next != TokenType.LBRACE && next != TokenType.ASSIGNMENT) {
+                Node node = parser.parse(lexer, PrecedencePairs.IDENTIFIER.getRight());
+                if (!(node instanceof IdentifierNode)) {
+                    throw new IllegalStateException("Function definition return type(s) must be identifiers, got '" + node + "' instead");
+                }
+                returnTypes.add((IdentifierNode) node);
+                next = lexer.peek().getType();
+            }
+            Node node = parser.parse(lexer, 0);
+            if (!(node instanceof ExpressionNode)) {
+                throw new IllegalStateException("A function implementation must be an expression, got '" + node + "' instead");
+            }
+            ExpressionNode body = (ExpressionNode) node;
+            return new FunctionDeclarationNode(new FunctionSignatureNode(parameterTypes, returnTypes), body);
+        }
+
+        private TypeExpressionNode parseTypeExpression(final Parser parser, final Lexer lexer) {
+            Node node = parser.parse(lexer, PrecedencePairs.IDENTIFIER.getRight());
+            if (!(node instanceof IdentifierNode)) {
+                throw new IllegalStateException("Function definition type expression must be of the form identifier:type, got '" + node + "' instead");
+            }
+            IdentifierNode target = (IdentifierNode) node;
+            if (lexer.peek().getType() != TokenType.COLON) {
+                throw new IllegalStateException("Function definition type expression must be of the form identifier:type, got'" + target + node + "' instead");
+            }
+            lexer.next();
+            node = parser.parse(lexer, PrecedencePairs.IDENTIFIER.getRight());
+            if (!(node instanceof IdentifierNode)) {
+                throw new IllegalStateException("Function definition type expression must be of the form identifier:type, got '" + target + ":" + node + "' instead");
+            }
+            IdentifierNode type = (IdentifierNode) node;
+            return new TypeExpressionNode(target, type);
+        }
+    }
+
+    static class FunctionSignatureNode extends ExpressionNode {
+        private final List<TypeExpressionNode> parameterTypes;
+        private final List<IdentifierNode> returnTypes;
+
+        FunctionSignatureNode(final List<TypeExpressionNode> parameterTypes, final List<IdentifierNode> returnTypes) {
+            this.parameterTypes = parameterTypes;
+            this.returnTypes = returnTypes;
+        }
+
+        public List<TypeExpressionNode> getParameterTypes() {
+            return parameterTypes;
+        }
+
+        public List<IdentifierNode> getReturnTypes() {
+            return returnTypes;
+        }
+
+        @Override
+        public String toString() {
+            return parameterTypes.stream().map(Object::toString).collect(Collectors.joining(" ")) + " -> " +
+                    returnTypes.stream().map(Object::toString).collect(Collectors.joining(" "));
+        }
+    }
+
+    //
     static class FunctionDefinitionPrefixParser implements PrefixParser {
 
         @Override
@@ -610,6 +699,14 @@ public class CalculatorParser {
                 throw new IllegalStateException("Must provide an identifier as type of a type expression, but was " + node);
             }
             return new TypeExpressionNode((IdentifierNode) node, (IdentifierNode) type);
+        }
+    }
+
+    static class IdentifierInfixParser implements InfixParser {
+
+        @Override
+        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
+            return node;
         }
     }
 

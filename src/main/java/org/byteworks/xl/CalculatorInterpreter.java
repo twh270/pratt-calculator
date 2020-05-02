@@ -151,7 +151,28 @@ public class CalculatorInterpreter {
         throw new IllegalStateException("Don't know how to call function " + functionCall);
     }
 
-    private Value functionDeclaration(CalculatorParser.FunctionDeclarationNode functionDefinition) {
+    private Value functionDeclaration(CalculatorParser.FunctionDeclarationNode functionDeclaration) {
+        CalculatorParser.FunctionSignatureNode functionSignature = functionDeclaration.getFunctionSignature();
+        final List<CalculatorParser.TypeExpressionNode> parameterTypes = functionSignature.getParameterTypes();
+        List<FunctionParameter> functionParameters =
+                parameterTypes.stream()
+                .map(it -> new FunctionParameter(
+                        it.getTarget().getChars(),
+                        interpreter.getType(it.getTypeExpression().getChars()))
+                )
+                .collect(Collectors.toList());
+        final List<CalculatorParser.IdentifierNode> returnTypes = functionSignature.getReturnTypes();
+        Type returnType;
+        if (returnTypes.size() == 1) {
+            returnType = new SimpleType(returnTypes.get(0).getChars());
+        } else {
+            returnType = new TypeList(returnTypes.stream().map(it -> interpreter.getType(it.getChars())).collect(Collectors.toList()));
+        }
+        // TODO type of value should be Function
+        return new Value(new Function(new FunctionSignature(functionParameters, returnType), new InterpretedFunction(functionDeclaration.getBody())), null);
+    }
+
+    private Value functionDeclaration1(CalculatorParser.FunctionDeclarationNode functionDefinition) {
         CalculatorParser.ProducesNode signature = functionDefinition.getTypeSignature();
         Node left = signature.getLeft();
         List<CalculatorParser.TypeExpressionNode> paramList = Collections.emptyList();
