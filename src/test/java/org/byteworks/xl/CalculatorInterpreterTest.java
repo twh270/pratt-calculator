@@ -85,7 +85,7 @@ class CalculatorInterpreterTest {
     }
 
     @Test
-    void executesFunctionDefinition() {
+    void executesFunctionCall() {
         String result = execute("f = fn x:Number y:Number -> Number { x + y }\nf 3 4");
         Type number = testObj.interpreter.getType("Number");
         Function fn = testObj.interpreter.getFunction("f", new TypeList(List.of(number, number)));

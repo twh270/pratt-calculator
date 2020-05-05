@@ -18,6 +18,7 @@ import org.byteworks.xl.parser.Node;
 
 public class CalculatorInterpreter {
     private static final String TYPE_NUMBER = "Number";
+    private static final String TYPE_FUNCTION = "Function";
 
     class InterpretedFunction implements FunctionImplementation {
         private final CalculatorParser.ExpressionNode expression;
@@ -88,6 +89,8 @@ public class CalculatorInterpreter {
     public CalculatorInterpreter() {
         Type number = new SimpleType(TYPE_NUMBER);
         interpreter.registerType(TYPE_NUMBER, new SimpleType(TYPE_NUMBER));
+        Type function = new SimpleType(TYPE_FUNCTION);
+        interpreter.registerType(TYPE_FUNCTION, function);
         List<FunctionParameter> twoNumbers = List.of(new FunctionParameter("x", interpreter.getType(TYPE_NUMBER)), new FunctionParameter("y", interpreter.getType(TYPE_NUMBER)));
         List<FunctionParameter> oneNumber = List.of(new FunctionParameter("x", interpreter.getType(TYPE_NUMBER)));
         interpreter.registerFunction("add", twoNumbers, number, numericAddition);
@@ -167,8 +170,7 @@ public class CalculatorInterpreter {
         } else {
             returnType = new TypeList(returnTypes.stream().map(it -> interpreter.getType(it.getChars())).collect(Collectors.toList()));
         }
-        // TODO type of value should be Function
-        return new Value(new Function(new FunctionSignature(functionParameters, returnType), new InterpretedFunction(functionDeclaration.getBody())), null);
+        return new Value(new Function(new FunctionSignature(functionParameters, returnType), new InterpretedFunction(functionDeclaration.getBody())), interpreter.getType(TYPE_FUNCTION));
     }
 
     private Value binaryOperatorExpression(final CalculatorParser.BinaryOpNode binaryOp) {
@@ -265,6 +267,12 @@ public class CalculatorInterpreter {
 
     private Value identifierExpression(final CalculatorParser.IdentifierNode expression) {
         String identifierName = expression.getChars();
+        Value value = interpreter.identifier(identifierName);
+        if (value.getType().equals(interpreter.getType(TYPE_NUMBER))) {
+            return value;
+        } else if (value.getType().equals(interpreter.getType(TYPE_FUNCTION))) {
+//            Value parameter = evaluateExpression(
+        }
         return interpreter.identifier(identifierName);
     }
 

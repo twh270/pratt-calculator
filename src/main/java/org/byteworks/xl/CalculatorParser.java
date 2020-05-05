@@ -34,6 +34,7 @@ public class CalculatorParser {
         static final Pair<Integer, Integer> POST_DECREMENT = new Pair<>(11, null);
         static final Pair<Integer, Integer> COLON = new Pair<>(11, 12);
         static final Pair<Integer, Integer> IDENTIFIER = new Pair<>(11, 12);
+        static final Pair<Integer, Integer> NUMBER = new Pair<>(-1, 12);
     }
 
     private enum ParserRule {
@@ -45,12 +46,12 @@ public class CalculatorParser {
         PLUSPLUS(TokenType.PLUSPLUS, PrecedencePairs.POST_INCREMENT, new PlusPlusPrefixParser(), new PlusPlusInfixParser()),
         MINUSMINUS(TokenType.MINUSMINUS, PrecedencePairs.POST_DECREMENT, new MinusMinusPrefixParser(), new MinusMinusInfixParser()),
         COMMA(TokenType.COMMA, PrecedencePairs.COMMA, null, new CommaInfixParser()),
-        ARROW(TokenType.ARROW, PrecedencePairs.ARROW, null, null/*new ArrowInfixParser()*/),
-        COLON(TokenType.COLON, PrecedencePairs.COLON, null, null/*new ColonInfixParser()*/),
+        ARROW(TokenType.ARROW, PrecedencePairs.ARROW, null, null),
+        COLON(TokenType.COLON, PrecedencePairs.COLON, null, null),
         EOF(TokenType.EOF, PrecedencePairs.EOF, new EofPrefixParser(), null),
-        NUMBER(TokenType.NUMBER, null, new NumberPrefixParser(), null),
+        NUMBER(TokenType.NUMBER, PrecedencePairs.NUMBER, new NumberPrefixParser(), null),
         LPAREN(TokenType.LPAREN, null, new LParenPrefixParser(), null),
-        IDENTIFIER(TokenType.IDENTIFIER, PrecedencePairs.IDENTIFIER, new IdentifierPrefixParser(), null/*new IdentifierInfixParser()*/),
+        IDENTIFIER(TokenType.IDENTIFIER, PrecedencePairs.IDENTIFIER, new IdentifierPrefixParser(), null),
         EOL(TokenType.EOL, PrecedencePairs.EOL, new EndOfLinePrefixParser(), null),
         FUNCTION_DEFINITION(TokenType.FUNCTION_DEFINITION, null, new FunctionDefinitionPrefixParser(), null),
         LBRACE(TokenType.LBRACE, PrecedencePairs.BRACES, new LeftBracePrefixParser(), null),
@@ -457,10 +458,10 @@ public class CalculatorParser {
 
         @Override
         public Node parse(final Token token, final Parser parser, final Lexer lexer) {
-            if (lexer.peek().getType() == TokenType.LPAREN) {
-                Node arguments = parser.parse(lexer, PrecedencePairs.PARENS.getRight());
-                return new FunctionCallNode(token.getChars(), arguments);
-            }
+//            if (lexer.peek().getType() == TokenType.LPAREN) {
+//                Node arguments = parser.parse(lexer, PrecedencePairs.PARENS.getRight());
+//                return new FunctionCallNode(token.getChars(), arguments);
+//            }
             return new IdentifierNode(token.getChars());
         }
     }
@@ -633,38 +634,6 @@ public class CalculatorParser {
         public Node parse(final Node node, final Parser parser, final Lexer lexer) {
             Node right = parser.parse(lexer, PrecedencePairs.COMMA.getRight());
             return new CommaNode(node, right);
-        }
-    }
-
-    static class ArrowInfixParser implements InfixParser {
-
-        @Override
-        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
-            Node right = parser.parse(lexer, PrecedencePairs.ARROW.getRight());
-            return new ProducesNode(node, right);
-        }
-    }
-
-    static class ColonInfixParser implements InfixParser {
-
-        @Override
-        public Node parse(final Node node, final org.byteworks.xl.parser.Parser parser, final Lexer lexer) {
-            if (!(node instanceof IdentifierNode)) {
-                throw new IllegalStateException("Must provide an identifier as target of a type expression, but was " + node);
-            }
-            Node type = parser.parse(lexer, PrecedencePairs.COLON.getRight());
-            if (!(type instanceof IdentifierNode)) {
-                throw new IllegalStateException("Must provide an identifier as type of a type expression, but was " + node);
-            }
-            return new TypeExpressionNode((IdentifierNode) node, (IdentifierNode) type);
-        }
-    }
-
-    static class IdentifierInfixParser implements InfixParser {
-
-        @Override
-        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
-            return node;
         }
     }
 
