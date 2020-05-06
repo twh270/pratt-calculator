@@ -30,12 +30,12 @@ class CalculatorParserTest {
             "post-increment, '4++', '++(4)'",
             "post-decrement, '4--', '--(4)'",
             "function definition, 'f = fn x:Number y:Number -> Number { x + y }', '(= f fn x:Number y:Number -> Number { (+ x y) })'",
-            "function call, 'f(3, 4)', '(f (3, 4))'"
+            "function call, 'f 3 4', '(f (3, 4))'"
     })
     void parsesInput(String name, String input, String expected) {
         Lexer lexer = new Lexer(input);
-        Parser parser = CalculatorParser.createParser();
-        List<Node> ast = parser.parse(lexer);
+        Parser parser = CalculatorParser.createParser(lexer, System.out);
+        List<Node> ast = parser.parse();
         StringBuilder sb = new StringBuilder();
         ast.forEach(sb::append);
         assertEquals(expected, sb.toString());

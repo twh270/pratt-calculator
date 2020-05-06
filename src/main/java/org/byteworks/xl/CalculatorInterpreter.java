@@ -1,6 +1,7 @@
 package org.byteworks.xl;
 
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 import java.util.stream.Collectors;
@@ -111,6 +112,27 @@ public class CalculatorInterpreter {
                 ps.println(node);
             }
         }
+    }
+
+    private List<Node> transform(List<Node> nodes) {
+        List<Node> transformedNodes = new ArrayList<>();
+        for (Node node: nodes) {
+            Node result = transform(node);
+            // TODO dislike!!!
+            if (result != null) {
+                transformedNodes.add(result);
+            }
+            transformedNodes.add(transform(node));
+        }
+        return transformedNodes;
+    }
+
+    private Node transform(Node node) {
+        if (node instanceof CalculatorParser.FunctionDeclarationNode) {
+            functionDeclaration((CalculatorParser.FunctionDeclarationNode) node);
+            return null;
+        }
+        return node;
     }
 
     private Value evaluateExpression(final CalculatorParser.ExpressionNode expression) {

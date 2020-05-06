@@ -9,7 +9,6 @@ import org.byteworks.xl.parser.Parser;
 
 public class REPL {
     public static void main(String[] args) {
-        Parser parser = CalculatorParser.createParser();
         CalculatorInterpreter interpreter = new CalculatorInterpreter();
 
         Scanner scanner = new Scanner(System.in);
@@ -18,7 +17,8 @@ public class REPL {
             if("quit".equalsIgnoreCase(input)) {
                 return;
             }
-            List<Node> nodes = parser.parse(new Lexer(input));
+            Parser parser = new Parser(new Lexer(input), System.out);
+            List<Node> nodes = parser.parse();
             interpreter.exec(nodes, System.out);
         }
     }

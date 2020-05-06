@@ -1,5 +1,6 @@
 package org.byteworks.xl;
 
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -10,6 +11,7 @@ import org.byteworks.xl.lexer.TokenType;
 import org.byteworks.xl.parser.InfixParser;
 import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.Pair;
+import org.byteworks.xl.parser.ParseContext;
 import org.byteworks.xl.parser.Parser;
 import org.byteworks.xl.parser.PrefixParser;
 
@@ -372,32 +374,32 @@ public class CalculatorParser {
     static class EofPrefixParser implements PrefixParser {
 
         @Override
-        public Node parse(final Token token, final Parser parser, Lexer lexer) {
-            return new EmptyNode();
+        public Node parse(ParseContext parseContext, Token token) {
+            return null;
         }
     }
 
     static class EndOfLinePrefixParser implements PrefixParser {
 
         @Override
-        public Node parse(final Token token, final Parser parser, final Lexer lexer) {
-            return parser.parse(lexer, PrecedencePairs.EOL.getRight());
+        public Node parse(ParseContext parseContext, Token token) {
+            return parseContext.parser.parse(parseContext, PrecedencePairs.EOL.getRight());
         }
     }
 
     static class NumberPrefixParser implements PrefixParser {
 
         @Override
-        public Node parse(final Token token, final Parser parser, Lexer lexer) {
-            return new LiteralNode(token.getChars());
+        public Node parse(ParseContext parseContext, Token token) {
+            return new CalculatorParser.LiteralNode(token.getChars());
         }
     }
 
     static class MinusPrefixParser implements PrefixParser {
 
         @Override
-        public Node parse(final Token token, final Parser parser, Lexer lexer) {
-            Node expr = parser.parse(lexer, PrecedencePairs.SIGNED.getRight());
+        public Node parse(ParseContext parseContext, Token token) {
+            Node expr = parseContext.parser.parse(parseContext, PrecedencePairs.SIGNED.getRight());
             if (!(expr instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for negative-signed");
             }
@@ -408,8 +410,8 @@ public class CalculatorParser {
     static class PlusPrefixParser implements PrefixParser {
 
         @Override
-        public Node parse(final Token token, final Parser parser, final Lexer lexer) {
-            Node expr = parser.parse(lexer, PrecedencePairs.SIGNED.getRight());
+        public Node parse(ParseContext parseContext, Token token) {
+            Node expr = parseContext.parser.parse(parseContext, PrecedencePairs.SIGNED.getRight());
             if (!(expr instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for positive-signed");
             }
@@ -420,8 +422,8 @@ public class CalculatorParser {
     static class MinusMinusPrefixParser implements PrefixParser {
 
         @Override
-        public Node parse(final Token token, final Parser parser, final Lexer lexer) {
-            Node expr = parser.parse(lexer, PrecedencePairs.PRE_DECREMENT.getRight());
+        public Node parse(ParseContext parseContext, Token token) {
+            Node expr = parseContext.parser.parse(parseContext, PrecedencePairs.PRE_DECREMENT.getRight());
             if (!(expr instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for pre-decrement");
             }
@@ -432,8 +434,8 @@ public class CalculatorParser {
     static class PlusPlusPrefixParser implements PrefixParser {
 
         @Override
-        public Node parse(final Token token, final Parser parser, final Lexer lexer) {
-            Node expr = parser.parse(lexer, PrecedencePairs.PRE_INCREMENT.getRight());
+        public Node parse(ParseContext parseContext, Token token) {
+            Node expr = parseContext.parser.parse(parseContext, PrecedencePairs.PRE_INCREMENT.getRight());
             if (!(expr instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for pre-increment");
             }
@@ -444,9 +446,9 @@ public class CalculatorParser {
     static class LParenPrefixParser implements PrefixParser {
 
         @Override
-        public Node parse(final Token token, final Parser parser, final Lexer lexer) {
-            Node expr = parser.parse(lexer, PrecedencePairs.PARENS.getRight());
-            Token tok = lexer.next();
+        public Node parse(ParseContext parseContext, Token token) {
+            Node expr = parseContext.parser.parse(parseContext, PrecedencePairs.PARENS.getRight());
+            Token tok = parseContext.lexer.next();
             if (!(tok.getType() == TokenType.RPAREN)) {
                 throw new IllegalStateException("Expected a right parenthesis but got " + tok);
             }
@@ -457,76 +459,72 @@ public class CalculatorParser {
     static class IdentifierPrefixParser implements PrefixParser {
 
         @Override
-        public Node parse(final Token token, final Parser parser, final Lexer lexer) {
-//            if (lexer.peek().getType() == TokenType.LPAREN) {
-//                Node arguments = parser.parse(lexer, PrecedencePairs.PARENS.getRight());
-//                return new FunctionCallNode(token.getChars(), arguments);
-//            }
+        public Node parse(ParseContext parseContext, Token token) {
             return new IdentifierNode(token.getChars());
         }
     }
 
     static class FunctionDefinitionPrefixParser implements PrefixParser {
 
-        @Override
-        public Node parse(final Token token, final Parser parser, final Lexer lexer) {
-            List<TypeExpressionNode> parameterTypes = new ArrayList<>();
-            while (lexer.peek().getType() != TokenType.ARROW) {
-                // TODO maybe param and return type is an infix parser on COLON and we expect parse(lexer, 0) to return a TypeExpressionNode
-                TypeExpressionNode typeExpressionNode = parseTypeExpression(parser, lexer);
-                parameterTypes.add(typeExpressionNode);
-            }
-            lexer.next();
-            List<IdentifierNode> returnTypes = new ArrayList<>();
-            TokenType next = lexer.peek().getType();
-            while (next != TokenType.LBRACE && next != TokenType.ASSIGNMENT) {
-                Node node = parser.parse(lexer, PrecedencePairs.IDENTIFIER.getRight());
-                if (!(node instanceof IdentifierNode)) {
-                    throw new IllegalStateException("Function definition return type(s) must be identifiers, got '" + node + "' instead");
-                }
-                returnTypes.add((IdentifierNode) node);
-                next = lexer.peek().getType();
-            }
-            Node node = parser.parse(lexer, 0);
-            if (!(node instanceof ExpressionNode)) {
-                throw new IllegalStateException("A function implementation must be an expression, got '" + node + "' instead");
-            }
-            ExpressionNode body = (ExpressionNode) node;
-            return new FunctionDeclarationNode(new FunctionSignatureNode(parameterTypes, returnTypes), body);
-        }
-
-        private TypeExpressionNode parseTypeExpression(final Parser parser, final Lexer lexer) {
-            Node node = parser.parse(lexer, PrecedencePairs.IDENTIFIER.getRight());
+        private TypeExpressionNode parseTypeExpression(ParseContext parseContext) {
+            Node node = parseContext.parser.parse(parseContext, PrecedencePairs.IDENTIFIER.getRight());
             if (!(node instanceof IdentifierNode)) {
                 throw new IllegalStateException("Function definition type expression must be of the form identifier:type, got '" + node + "' instead");
             }
             IdentifierNode target = (IdentifierNode) node;
-            if (lexer.peek().getType() != TokenType.COLON) {
+            if (parseContext.lexer.peek().getType() != TokenType.COLON) {
                 throw new IllegalStateException("Function definition type expression must be of the form identifier:type, got'" + target + node + "' instead");
             }
-            lexer.next();
-            node = parser.parse(lexer, PrecedencePairs.IDENTIFIER.getRight());
+            parseContext.lexer.next();
+            node = parseContext.parser.parse(parseContext, PrecedencePairs.IDENTIFIER.getRight());
             if (!(node instanceof IdentifierNode)) {
                 throw new IllegalStateException("Function definition type expression must be of the form identifier:type, got '" + target + ":" + node + "' instead");
             }
             IdentifierNode type = (IdentifierNode) node;
             return new TypeExpressionNode(target, type);
         }
+
+        @Override
+        public Node parse(ParseContext parseContext, Token token) {
+            List<TypeExpressionNode> parameterTypes = new ArrayList<>();
+            while (parseContext.lexer.peek().getType() != TokenType.ARROW) {
+                // TODO maybe param and return type is an infix parser on COLON and we expect parse(lexer, 0) to return a TypeExpressionNode
+                TypeExpressionNode typeExpressionNode = parseTypeExpression(parseContext);
+                parameterTypes.add(typeExpressionNode);
+            }
+            parseContext.lexer.next();
+            List<IdentifierNode> returnTypes = new ArrayList<>();
+            TokenType next = parseContext.lexer.peek().getType();
+            while (next != TokenType.LBRACE && next != TokenType.ASSIGNMENT) {
+                Node node = parseContext.parser.parse(parseContext, PrecedencePairs.IDENTIFIER.getRight());
+                if (!(node instanceof IdentifierNode)) {
+                    throw new IllegalStateException("Function definition return type(s) must be identifiers, got '" + node + "' instead");
+                }
+                returnTypes.add((IdentifierNode) node);
+                next = parseContext.lexer.peek().getType();
+            }
+            Node node = parseContext.parser.parse(parseContext, 0);
+            if (!(node instanceof ExpressionNode)) {
+                throw new IllegalStateException("A function implementation must be an expression, got '" + node + "' instead");
+            }
+            ExpressionNode body = (ExpressionNode) node;
+            return new FunctionDeclarationNode(new FunctionSignatureNode(parameterTypes, returnTypes), body);
+        }
     }
 
     static class LeftBracePrefixParser implements PrefixParser {
 
         @Override
-        public Node parse(final Token token, final Parser parser, final Lexer lexer) {
+        public Node parse(ParseContext parseContext, Token token) {
             List<ExpressionNode> nodes = new ArrayList<>();
-            while (lexer.peek().getType() != TokenType.RBRACE) {
-                Node node = parser.parse(lexer, 0);
+            while (parseContext.lexer.peek().getType() != TokenType.RBRACE) {
+                Node node = parseContext.parser.parse(parseContext, 0);
                 if (!(node instanceof ExpressionNode)) {
                     throw new IllegalStateException("All elements of an expression list enclosed by { } must be an expression, but '" + node + "' is not");
                 }
                 nodes.add((ExpressionNode) node);
             }
-            lexer.next();
+            parseContext.lexer.next();
             return new ExpressionListNode(nodes);
         }
     }
@@ -534,8 +532,8 @@ public class CalculatorParser {
     static class PlusInfixParser implements InfixParser {
 
         @Override
-        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
-            Node rhs = parser.parse(lexer, PrecedencePairs.PLUS_MINUS.getRight());
+        public Node parse(ParseContext parseContext, Node node) {
+            Node rhs = parseContext.parser.parse(parseContext, PrecedencePairs.PLUS_MINUS.getRight());
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for lhs argument to plus");
             }
@@ -549,7 +547,7 @@ public class CalculatorParser {
     static class PlusPlusInfixParser implements InfixParser {
 
         @Override
-        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
+        public Node parse(ParseContext parseContext, Node node) {
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for post-increment");
             }
@@ -560,8 +558,8 @@ public class CalculatorParser {
     static class MinusInfixParser implements InfixParser {
 
         @Override
-        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
-            Node rhs = parser.parse(lexer, PrecedencePairs.PLUS_MINUS.getRight());
+        public Node parse(ParseContext parseContext, Node node) {
+            Node rhs = parseContext.parser.parse(parseContext, PrecedencePairs.PLUS_MINUS.getRight());
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for lhs argument to minus");
             }
@@ -575,7 +573,7 @@ public class CalculatorParser {
     static class MinusMinusInfixParser implements InfixParser {
 
         @Override
-        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
+        public Node parse(ParseContext parseContext, Node node) {
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for post-decrement");
             }
@@ -586,8 +584,8 @@ public class CalculatorParser {
     static class MultiplyInfixParser implements InfixParser {
 
         @Override
-        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
-            Node rhs = parser.parse(lexer, PrecedencePairs.MULT_DIV.getRight());
+        public Node parse(ParseContext parseContext, Node node) {
+            Node rhs = parseContext.parser.parse(parseContext, PrecedencePairs.MULT_DIV.getRight());
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for lhs argument to multiply");
             }
@@ -601,8 +599,8 @@ public class CalculatorParser {
     static class DivideInfixParser implements InfixParser {
 
         @Override
-        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
-            Node rhs = parser.parse(lexer, PrecedencePairs.MULT_DIV.getRight());
+        public Node parse(ParseContext parseContext, Node node) {
+            Node rhs = parseContext.parser.parse(parseContext, PrecedencePairs.MULT_DIV.getRight());
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for lhs argument to divide");
             }
@@ -616,8 +614,8 @@ public class CalculatorParser {
     static class AssignmentInfixParser implements InfixParser {
 
         @Override
-        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
-            Node rhs = parser.parse(lexer, PrecedencePairs.ASSIGNMENT.getRight());
+        public Node parse(ParseContext parseContext, Node node) {
+            Node rhs = parseContext.parser.parse(parseContext, PrecedencePairs.ASSIGNMENT.getRight());
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for lhs argument to assignment");
             }
@@ -631,14 +629,14 @@ public class CalculatorParser {
     static class CommaInfixParser implements InfixParser {
 
         @Override
-        public Node parse(final Node node, final Parser parser, final Lexer lexer) {
-            Node right = parser.parse(lexer, PrecedencePairs.COMMA.getRight());
+        public Node parse(ParseContext parseContext, Node node) {
+            Node right = parseContext.parser.parse(parseContext, PrecedencePairs.COMMA.getRight());
             return new CommaNode(node, right);
         }
     }
 
-    public static Parser createParser() {
-        Parser parser = new Parser();
+    public static Parser createParser(Lexer lexer, PrintStream debugStream) {
+        Parser parser = new Parser(lexer, debugStream);
         for (ParserRule rule : ParserRule.values()) {
             parser.registerParserRule(rule.tokenType, rule.precedencePair, rule.prefixParser, rule.infixParser);
         }

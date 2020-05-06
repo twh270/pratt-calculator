@@ -25,8 +25,8 @@ class CalculatorInterpreterTest {
 
     private void setUp(String input) {
         Lexer lexer = new Lexer(input);
-        Parser parser = CalculatorParser.createParser();
-        nodes = parser.parse(lexer);
+        Parser parser = CalculatorParser.createParser(lexer, System.out);
+        nodes = parser.parse();
         baos = new ByteArrayOutputStream();
         ps = new PrintStream(baos);
         testObj = new CalculatorInterpreter();
