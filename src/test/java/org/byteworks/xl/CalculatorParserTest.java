@@ -38,7 +38,7 @@ class CalculatorParserTest {
             "function call 3, 'f(2)', '(f (2))'",
             "function call 4, 'f(3, 3 * 4, 5)', '(f (3, (* 3 4), 5))'",
             "expr list 1, 'x = { 3 * 4\n4 + 2 }', '(= x { (* 3 4),(+ 4 2) })'",
-            "function call with expr list, 'f = fn x:Number -> Number { x + 10 }\nn = { 3 * 4\n4 + 2 }\nf(n)', '(= f fn x:Number -> Number { (+ x 10) }), (= n { (* 3 4),(+ 4 2) }), (f (n))'"
+            "function call with expr list, 'f = fn x:Number -> Number { x + 10 }\nn = { 3 * 4\n4 + 2 }\nf(n)', '(= f fn x:Number -> Number { (+ x 10) }), (= n { (* 3 4),(+ 4 2) }), (f (n))'",
     })
     void parsesInput(String name, String input, String expected) {
         Lexer lexer = new Lexer(input);

@@ -15,7 +15,6 @@ import org.byteworks.xl.parser.ParseContext;
 import org.byteworks.xl.parser.Parser;
 import org.byteworks.xl.parser.PrefixParser;
 
-// TODO a require(TokenType[, TokenType]) method to expect a next token type
 // TODO normalize error messages
 public class CalculatorParser extends Parser {
 
@@ -31,7 +30,7 @@ public class CalculatorParser extends Parser {
         return parser;
     }
 
-    static class PrecedencePairs {
+    private static class PrecedencePairs {
         static final Pair<Integer, Integer> EOF = new Pair<>(-1, null);
         static final Pair<Integer, Integer> EOL = new Pair<>(-1, 0);
         static final Pair<Integer, Integer> PARENS = new Pair<>(1, 0);
@@ -83,6 +82,14 @@ public class CalculatorParser extends Parser {
             this.prefixParser = prefixParser;
             this.infixParser = infixParser;
         }
+    }
+
+    private static <T extends Node> T require(ParseContext parseContext, int precedence, Class clazz, String error) {
+        Node node = parseContext.parser.parse(parseContext, precedence);
+        if (!(clazz.isAssignableFrom(node.getClass()))) {
+            throw new IllegalStateException(error + "(got " + node.getClass().getSimpleName() + "='" + node + "')");
+        }
+        return (T) node;
     }
 
     @Override
@@ -415,11 +422,8 @@ public class CalculatorParser extends Parser {
 
         @Override
         public Node parse(ParseContext parseContext, Token token) {
-            Node expr = parseContext.parser.parse(parseContext, PrecedencePairs.SIGNED.getRight());
-            if (!(expr instanceof ExpressionNode)) {
-                throw new IllegalStateException("Must provide an expression for negative-signed");
-            }
-            return new NegativeSignedNode((ExpressionNode) expr);
+            ExpressionNode expr = require(parseContext, PrecedencePairs.SIGNED.getRight(), ExpressionNode.class, "Must provide an expression for negative-signed");
+            return new NegativeSignedNode(expr);
         }
     }
 
@@ -427,11 +431,8 @@ public class CalculatorParser extends Parser {
 
         @Override
         public Node parse(ParseContext parseContext, Token token) {
-            Node expr = parseContext.parser.parse(parseContext, PrecedencePairs.SIGNED.getRight());
-            if (!(expr instanceof ExpressionNode)) {
-                throw new IllegalStateException("Must provide an expression for positive-signed");
-            }
-            return new PositiveSignedNode((ExpressionNode) expr);
+            ExpressionNode expr = require(parseContext, PrecedencePairs.SIGNED.getRight(), ExpressionNode.class, "Must provide an expression for positive-signed");
+            return new PositiveSignedNode(expr);
         }
     }
 
@@ -439,11 +440,8 @@ public class CalculatorParser extends Parser {
 
         @Override
         public Node parse(ParseContext parseContext, Token token) {
-            Node expr = parseContext.parser.parse(parseContext, PrecedencePairs.PRE_DECREMENT.getRight());
-            if (!(expr instanceof ExpressionNode)) {
-                throw new IllegalStateException("Must provide an expression for pre-decrement");
-            }
-            return new PreDecrementNode((ExpressionNode) expr);
+            ExpressionNode expr = require(parseContext, PrecedencePairs.PRE_DECREMENT.getRight(), ExpressionNode.class, "Must provide an expression for pre-decrement");
+            return new PreDecrementNode(expr);
         }
     }
 
@@ -451,11 +449,8 @@ public class CalculatorParser extends Parser {
 
         @Override
         public Node parse(ParseContext parseContext, Token token) {
-            Node expr = parseContext.parser.parse(parseContext, PrecedencePairs.PRE_INCREMENT.getRight());
-            if (!(expr instanceof ExpressionNode)) {
-                throw new IllegalStateException("Must provide an expression for pre-increment");
-            }
-            return new PreIncrementNode((ExpressionNode) expr);
+            ExpressionNode expr = require(parseContext, PrecedencePairs.PRE_INCREMENT.getRight(), ExpressionNode.class, "Must provide an expression for pre-increment");
+            return new PreIncrementNode(expr);
         }
     }
 
@@ -487,47 +482,30 @@ public class CalculatorParser extends Parser {
     static class FunctionDefinitionPrefixParser implements PrefixParser {
 
         private TypeExpressionNode parseTypeExpression(ParseContext parseContext) {
-            Node node = parseContext.parser.parse(parseContext, PrecedencePairs.IDENTIFIER.getRight());
-            if (!(node instanceof IdentifierNode)) {
-                throw new IllegalStateException("Function definition type expression must be of the form identifier:type, got '" + node + "' instead");
+            IdentifierNode name = require(parseContext, PrecedencePairs.IDENTIFIER.getRight(), IdentifierNode.class, "Function definition type expression must be of the form identifier:type");
+            if (!parseContext.lexer.consumeIf(TokenType.COLON)) {
+                throw new IllegalStateException("Function definition type expression must be of the form identifier:type");
             }
-            IdentifierNode target = (IdentifierNode) node;
-            if (parseContext.lexer.peek().getType() != TokenType.COLON) {
-                throw new IllegalStateException("Function definition type expression must be of the form identifier:type, got'" + target + node + "' instead");
-            }
-            parseContext.lexer.next();
-            node = parseContext.parser.parse(parseContext, PrecedencePairs.IDENTIFIER.getRight());
-            if (!(node instanceof IdentifierNode)) {
-                throw new IllegalStateException("Function definition type expression must be of the form identifier:type, got '" + target + ":" + node + "' instead");
-            }
-            IdentifierNode type = (IdentifierNode) node;
-            return new TypeExpressionNode(target, type);
+            IdentifierNode type = require(parseContext, PrecedencePairs.IDENTIFIER.getRight(), IdentifierNode.class, "Function definition type expression must be of the form identifier:type");
+            return new TypeExpressionNode(name, type);
         }
 
         @Override
         public Node parse(ParseContext parseContext, Token token) {
             List<TypeExpressionNode> parameterTypes = new ArrayList<>();
-            while (parseContext.lexer.peek().getType() != TokenType.ARROW) {
+            while (!parseContext.lexer.consumeIf(TokenType.ARROW)) {
                 // TODO maybe param and return type is an infix parser on COLON and we expect parse(lexer, 0) to return a TypeExpressionNode
                 TypeExpressionNode typeExpressionNode = parseTypeExpression(parseContext);
                 parameterTypes.add(typeExpressionNode);
             }
-            parseContext.lexer.next();
             List<IdentifierNode> returnTypes = new ArrayList<>();
             TokenType next = parseContext.lexer.peek().getType();
             while (next != TokenType.LBRACE && next != TokenType.ASSIGNMENT) {
-                Node node = parseContext.parser.parse(parseContext, PrecedencePairs.IDENTIFIER.getRight());
-                if (!(node instanceof IdentifierNode)) {
-                    throw new IllegalStateException("Function definition return type(s) must be identifiers, got '" + node + "' instead");
-                }
-                returnTypes.add((IdentifierNode) node);
+                IdentifierNode node = require(parseContext, PrecedencePairs.IDENTIFIER.getRight(), IdentifierNode.class, "Function definition return type(s) must be identifiers");
+                returnTypes.add(node);
                 next = parseContext.lexer.peek().getType();
             }
-            Node node = parseContext.parser.parse(parseContext, 0);
-            if (!(node instanceof ExpressionNode)) {
-                throw new IllegalStateException("A function implementation must be an expression, got '" + node + "' instead");
-            }
-            ExpressionNode body = (ExpressionNode) node;
+            ExpressionNode body = require(parseContext, 0, ExpressionNode.class, "A function implementation must be an expression");
             return new FunctionDeclarationNode(new FunctionSignatureNode(parameterTypes, returnTypes), body);
         }
     }
@@ -538,11 +516,8 @@ public class CalculatorParser extends Parser {
         public Node parse(ParseContext parseContext, Token token) {
             List<ExpressionNode> nodes = new ArrayList<>();
             while (parseContext.lexer.peek().getType() != TokenType.RBRACE) {
-                Node node = parseContext.parser.parse(parseContext, 0);
-                if (!(node instanceof ExpressionNode)) {
-                    throw new IllegalStateException("All elements of an expression list enclosed by { } must be an expression, but '" + node + "' is not");
-                }
-                nodes.add((ExpressionNode) node);
+                ExpressionNode node = require(parseContext, 0, ExpressionNode.class, "All elements of an expression list enclosed by { } must be an expression");
+                nodes.add(node);
             }
             parseContext.lexer.next();
             return new ExpressionListNode(nodes);
@@ -553,14 +528,11 @@ public class CalculatorParser extends Parser {
 
         @Override
         public Node parse(ParseContext parseContext, Node node) {
-            Node rhs = parseContext.parser.parse(parseContext, PrecedencePairs.PLUS_MINUS.getRight());
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for lhs argument to plus");
             }
-            if (!(rhs instanceof ExpressionNode)) {
-                throw new IllegalStateException("Must provide an expression for rhs argument to plus");
-            }
-            return new PlusNode((ExpressionNode) node, (ExpressionNode) rhs);
+            ExpressionNode rhs = require(parseContext, PrecedencePairs.PLUS_MINUS.getRight(), ExpressionNode.class, "Must provide an expression for rhs argument to plus");
+            return new PlusNode((ExpressionNode) node, rhs);
         }
     }
 
@@ -579,14 +551,11 @@ public class CalculatorParser extends Parser {
 
         @Override
         public Node parse(ParseContext parseContext, Node node) {
-            Node rhs = parseContext.parser.parse(parseContext, PrecedencePairs.PLUS_MINUS.getRight());
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for lhs argument to minus");
             }
-            if (!(rhs instanceof ExpressionNode)) {
-                throw new IllegalStateException("Must provide an expression for rhs argument to minus");
-            }
-            return new MinusNode((ExpressionNode) node, (ExpressionNode) rhs);
+            ExpressionNode rhs = require(parseContext, PrecedencePairs.PLUS_MINUS.getRight(), ExpressionNode.class, "Must provide an expression for rhs argument to minus");
+            return new MinusNode((ExpressionNode) node, rhs);
         }
     }
 
@@ -605,14 +574,11 @@ public class CalculatorParser extends Parser {
 
         @Override
         public Node parse(ParseContext parseContext, Node node) {
-            Node rhs = parseContext.parser.parse(parseContext, PrecedencePairs.MULT_DIV.getRight());
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Expected an expression for lhs argument to multiply, got '" + node + "' instead");
             }
-            if (!(rhs instanceof ExpressionNode)) {
-                throw new IllegalStateException("Expected an expression for rhs argument to multiply, got '" + node + "' instead");
-            }
-            return new MultiplyNode((ExpressionNode) node, (ExpressionNode) rhs);
+            ExpressionNode rhs = require(parseContext, PrecedencePairs.MULT_DIV.getRight(), ExpressionNode.class, "Expected an expression for rhs argument to multiply");
+            return new MultiplyNode((ExpressionNode) node, rhs);
         }
     }
 
@@ -620,14 +586,11 @@ public class CalculatorParser extends Parser {
 
         @Override
         public Node parse(ParseContext parseContext, Node node) {
-            Node rhs = parseContext.parser.parse(parseContext, PrecedencePairs.MULT_DIV.getRight());
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for lhs argument to divide");
             }
-            if (!(rhs instanceof ExpressionNode)) {
-                throw new IllegalStateException("Must provide an expression for rhs argument to divide");
-            }
-            return new DivideNode((ExpressionNode) node, (ExpressionNode) rhs);
+            ExpressionNode rhs = require(parseContext, PrecedencePairs.MULT_DIV.getRight(), ExpressionNode.class, "Must provide an expression for rhs argument to divide");
+            return new DivideNode((ExpressionNode) node, rhs);
         }
     }
 
@@ -635,14 +598,11 @@ public class CalculatorParser extends Parser {
 
         @Override
         public Node parse(ParseContext parseContext, Node node) {
-            Node rhs = parseContext.parser.parse(parseContext, PrecedencePairs.ASSIGNMENT.getRight());
             if (!(node instanceof ExpressionNode)) {
                 throw new IllegalStateException("Must provide an expression for lhs argument to assignment");
             }
-            if (!(rhs instanceof ExpressionNode)) {
-                throw new IllegalStateException("Must provide an expression for rhs argument to assignment");
-            }
-            return new AssignmentNode((ExpressionNode) node, (ExpressionNode) rhs);
+            ExpressionNode rhs = require(parseContext, PrecedencePairs.ASSIGNMENT.getRight(), ExpressionNode.class, "Must provide an expression for rhs argument to assignment");
+            return new AssignmentNode((ExpressionNode) node, rhs);
         }
     }
 

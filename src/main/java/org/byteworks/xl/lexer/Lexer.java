@@ -1,6 +1,5 @@
 package org.byteworks.xl.lexer;
 
-// TODO consumeIf(TokenType t) peeks and consumes iff token type is t and returns boolean
 public class Lexer {
     private final String input;
     private int pos;
@@ -105,12 +104,9 @@ public class Lexer {
             }
             return Tokens.PLUS;
         } else if (ch == '-') {
-            char peek = peek_ch();
-            if (peek == '-') {
-                read_ch();
+            if (consumeIf('-')) {
                 return Tokens.MINUSMINUS;
-            } else if (peek == '>') {
-                read_ch();
+            } else if (consumeIf('>')) {
                 return Tokens.ARROW;
             }
             return Tokens.MINUS;
@@ -143,8 +139,28 @@ public class Lexer {
         return token;
     }
 
+    public boolean consumeIf(TokenType... tokenTypes) {
+        Token token = peek();
+        for (TokenType tokenType : tokenTypes) {
+            if (token.getType() == tokenType) {
+                next();
+                return true;
+            }
+        }
+        return false;
+    }
+
     private char peek_ch() {
         return input.charAt(pos);
+    }
+
+    private boolean consumeIf(char tokenChar) {
+        char ch = peek_ch();
+        if (tokenChar == ch) {
+            read_ch();
+            return true;
+        }
+        return false;
     }
 
     private char read_ch() {

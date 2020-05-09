@@ -49,7 +49,7 @@ public class Parser {
         return nodes;
     }
 
-    public Node parse(final ParseContext parseContext, final int precedence) {
+    public <T extends Node> T parse(final ParseContext parseContext, final int precedence) {
         Token token = parseContext.lexer.next();
         Node node = parseFirstNode(parseContext, token);
         while (shouldParseInfix(precedence)) {
@@ -60,7 +60,7 @@ public class Parser {
             }
             node = infixParser.parse(parseContext, node);
         }
-        return node;
+        return (T) node;
     }
 
     private boolean shouldParseInfix(int precedence) {
