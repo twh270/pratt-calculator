@@ -3,6 +3,7 @@ package org.byteworks.xl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.byteworks.xl.lexer.Lexer;
 import org.byteworks.xl.parser.Node;
@@ -24,7 +25,7 @@ class CalculatorParserTest {
             "parenthesized 2, '(3 + 4) * 6', '(* (+ 3 4) 6)'",
             "variable assignment 1, 'x = 3', '(= x 3)'",
             "variable assignment 2, 'x = 3 * (4 + 9)', '(= x (* 3 (+ 4 9)))'",
-            "end of line, 'x = 3\nx * 2', '(= x 3)(* x 2)'",
+            "end of line, 'x = 3\nx * 2', '(= x 3), (* x 2)'",
             "pre-increment, '++4', '++(4)'",
             "pre-decrement, '--4', '--(4)'",
             "post-increment, '4++', '++(4)'",
@@ -35,15 +36,16 @@ class CalculatorParserTest {
             "function call 1, 'f(3, 4)', '(f (3, 4))'",
             "function call 2, 'f()', '(f ())'",
             "function call 3, 'f(2)', '(f (2))'",
-            "function call 4, 'f(3, 3 * 4, 5)', '(f (3, (* 3 4), 5))'"
+            "function call 4, 'f(3, 3 * 4, 5)', '(f (3, (* 3 4), 5))'",
+            "expr list 1, 'x = { 3 * 4\n4 + 2 }', '(= x { (* 3 4),(+ 4 2) })'",
+            "function call with expr list, 'f = fn x:Number -> Number { x + 10 }\nn = { 3 * 4\n4 + 2 }\nf(n)', '(= f fn x:Number -> Number { (+ x 10) }), (= n { (* 3 4),(+ 4 2) }), (f (n))'"
     })
     void parsesInput(String name, String input, String expected) {
         Lexer lexer = new Lexer(input);
         Parser parser = CalculatorParser.createParser(lexer, System.out);
         List<Node> ast = parser.parse();
-        StringBuilder sb = new StringBuilder();
-        ast.forEach(sb::append);
-        assertEquals(expected, sb.toString());
+        String result = ast.stream().map(Object::toString).collect(Collectors.joining(", "));
+        assertEquals(expected, result);
     }
 
 }

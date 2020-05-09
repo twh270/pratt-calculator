@@ -90,7 +90,8 @@ class CalculatorInterpreterTest {
             "function call 2, 'f = fn -> Number { 3 }\nf()', '(Unit -> Number): Unit\n3: Number\n'",
             "function call 3, 'f = fn x:Number -> Number { x * 10 }\nf(6)', '(Number -> Number): Number\n60: Number\n'",
             "function call 4, 'f = fn x:Number y:Number z:Number -> Number {x + y + z}\nf(6, 3 * 4, 2)', '(Number, Number, Number -> Number): Number, Number, Number\n20: Number\n'",
-            "function call 5, 'f = fn -> { }', '(Unit -> Unit): Unit\n'"
+            "function call 5, 'f = fn -> { }', '(Unit -> Unit): Unit\n'",
+            "function call 5, 'f = fn x:Number -> Number { x + 10 }\nn = { 3 * 4\n4 + 2 }\nf(n)', '(Number -> Number): Number\n6: Number\n16: Number\n'"
     })
     void executesFunctionCall(String name, String code, String expected) {
         String result = execute(code);
