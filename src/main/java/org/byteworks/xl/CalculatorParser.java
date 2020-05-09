@@ -17,12 +17,24 @@ import org.byteworks.xl.parser.PrefixParser;
 
 // TODO a require(TokenType[, TokenType]) method to expect a next token type
 // TODO normalize error messages
-public class CalculatorParser {
+public class CalculatorParser extends Parser {
+
+    public CalculatorParser(final Lexer lexer, final PrintStream debugStream) {
+        super(lexer, debugStream);
+    }
+
+    public static CalculatorParser createParser(Lexer lexer, PrintStream debugStream) {
+        CalculatorParser parser = new CalculatorParser(lexer, debugStream);
+        for (ParserRule rule : ParserRule.values()) {
+            parser.registerParserRule(rule.tokenType, rule.precedencePair, rule.prefixParser, rule.infixParser);
+        }
+        return parser;
+    }
 
     static class PrecedencePairs {
         static final Pair<Integer, Integer> EOF = new Pair<>(-1, null);
         static final Pair<Integer, Integer> EOL = new Pair<>(-1, 0);
-        static final Pair<Integer, Integer> PARENS = new Pair<>(-1, 0);
+        static final Pair<Integer, Integer> PARENS = new Pair<>(1, 0);
         static final Pair<Integer, Integer> BRACES = new Pair<>(-1, 0);
         static final Pair<Integer, Integer> COMMA = new Pair<>(1, 2);
         static final Pair<Integer, Integer> ARROW = new Pair<>(1, 2);
@@ -52,12 +64,12 @@ public class CalculatorParser {
         COLON(TokenType.COLON, PrecedencePairs.COLON, null, null),
         EOF(TokenType.EOF, PrecedencePairs.EOF, new EofPrefixParser(), null),
         NUMBER(TokenType.NUMBER, PrecedencePairs.NUMBER, new NumberPrefixParser(), null),
-        LPAREN(TokenType.LPAREN, null, new LParenPrefixParser(), null),
+        LPAREN(TokenType.LPAREN, PrecedencePairs.PARENS, new LParenPrefixParser(), new LParenInfixParser()),
         IDENTIFIER(TokenType.IDENTIFIER, PrecedencePairs.IDENTIFIER, new IdentifierPrefixParser(), null),
         EOL(TokenType.EOL, PrecedencePairs.EOL, new EndOfLinePrefixParser(), null),
         FUNCTION_DEFINITION(TokenType.FUNCTION_DEFINITION, null, new FunctionDefinitionPrefixParser(), null),
         LBRACE(TokenType.LBRACE, PrecedencePairs.BRACES, new LeftBracePrefixParser(), null),
-        RPAREN(TokenType.RPAREN, PrecedencePairs.PARENS, null, null),
+        RPAREN(TokenType.RPAREN, PrecedencePairs.PARENS, new RParenPrefixParser(), new RParenInfixParser()),
         RBRACE(TokenType.RBRACE, PrecedencePairs.BRACES, null, null);
 
         final TokenType tokenType;
@@ -73,7 +85,26 @@ public class CalculatorParser {
         }
     }
 
+    @Override
+    public List<Node> parse() {
+        List<Node> nodes = super.parse();
+        return transform(nodes);
+    }
+
+    // TODO return an AbstractSyntaxTree that has function/type definitions
+    private List<Node> transform(List<Node> nodes) {
+        List<Node> transformed = new ArrayList<>();
+        for (Node node : nodes) {
+            transformed.add(node);
+        }
+        return transformed;
+    }
+
     private static class EmptyNode extends Node {
+        @Override
+        public String toString() {
+            return "";
+        }
     }
 
     static class ExpressionNode extends Node {
@@ -246,21 +277,6 @@ public class CalculatorParser {
         }
     }
 
-    public static class ProducesNode extends ExpressionNode {
-        private final Node left;
-        private final Node right;
-
-        ProducesNode(final Node left, final Node right) {
-            this.left = left;
-            this.right = right;
-        }
-
-        @Override
-        public String toString() {
-            return "(" + left + " -> " + right + ")";
-        }
-    }
-
     static class ExpressionListNode extends ExpressionNode {
         private final List<ExpressionNode> list;
 
@@ -302,16 +318,16 @@ public class CalculatorParser {
     }
 
     static class FunctionCallNode extends ExpressionNode {
-        private final String chars;
+        private final String name;
         private final Node arguments;
 
-        FunctionCallNode(final String chars, final Node arguments) {
-            this.chars = chars;
+        FunctionCallNode(final String name, final Node arguments) {
+            this.name = name;
             this.arguments = arguments;
         }
 
-        String getChars() {
-            return chars;
+        String getName() {
+            return name;
         }
 
         Node getArguments() {
@@ -320,7 +336,7 @@ public class CalculatorParser {
 
         @Override
         public String toString() {
-            return "(" + chars + " (" + arguments + "))";
+            return "(" + name + " (" + arguments + "))";
         }
     }
 
@@ -448,11 +464,15 @@ public class CalculatorParser {
         @Override
         public Node parse(ParseContext parseContext, Token token) {
             Node expr = parseContext.parser.parse(parseContext, PrecedencePairs.PARENS.getRight());
-            Token tok = parseContext.lexer.next();
-            if (!(tok.getType() == TokenType.RPAREN)) {
-                throw new IllegalStateException("Expected a right parenthesis but got " + tok);
-            }
             return expr;
+        }
+    }
+
+    static class RParenPrefixParser implements PrefixParser {
+
+        @Override
+        public Node parse(final ParseContext parseContext, final Token token) {
+            return new EmptyNode();
         }
     }
 
@@ -587,10 +607,10 @@ public class CalculatorParser {
         public Node parse(ParseContext parseContext, Node node) {
             Node rhs = parseContext.parser.parse(parseContext, PrecedencePairs.MULT_DIV.getRight());
             if (!(node instanceof ExpressionNode)) {
-                throw new IllegalStateException("Must provide an expression for lhs argument to multiply");
+                throw new IllegalStateException("Expected an expression for lhs argument to multiply, got '" + node + "' instead");
             }
             if (!(rhs instanceof ExpressionNode)) {
-                throw new IllegalStateException("Must provide an expression for rhs argument to multiply");
+                throw new IllegalStateException("Expected an expression for rhs argument to multiply, got '" + node + "' instead");
             }
             return new MultiplyNode((ExpressionNode) node, (ExpressionNode) rhs);
         }
@@ -635,11 +655,21 @@ public class CalculatorParser {
         }
     }
 
-    public static Parser createParser(Lexer lexer, PrintStream debugStream) {
-        Parser parser = new Parser(lexer, debugStream);
-        for (ParserRule rule : ParserRule.values()) {
-            parser.registerParserRule(rule.tokenType, rule.precedencePair, rule.prefixParser, rule.infixParser);
+    static class RParenInfixParser implements InfixParser {
+
+        @Override
+        public Node parse(final ParseContext parseContext, final Node node) {
+            return node;
         }
-        return parser;
     }
+
+    static class LParenInfixParser implements InfixParser {
+
+        @Override
+        public Node parse(final ParseContext parseContext, final Node node) {
+            Node arguments = parseContext.parser.parse(parseContext, PrecedencePairs.PARENS.getRight());
+            return new FunctionCallNode(node.toString(), arguments);
+        }
+    }
+
 }

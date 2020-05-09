@@ -30,7 +30,10 @@ class CalculatorParserTest {
             "post-increment, '4++', '++(4)'",
             "post-decrement, '4--', '--(4)'",
             "function definition, 'f = fn x:Number y:Number -> Number { x + y }', '(= f fn x:Number y:Number -> Number { (+ x y) })'",
-            "function call, 'f 3 4', '(f (3, 4))'"
+            "function call 1, 'f(3, 4)', '(f (3, 4))'",
+            "function call 2, 'f()', '(f ())'",
+            "function call 3, 'f(2)', '(f (2))'",
+            "function call 4, 'f(3, 3 * 4, 5)', '(f (3, (* 3 4), 5))'"
     })
     void parsesInput(String name, String input, String expected) {
         Lexer lexer = new Lexer(input);

@@ -1,7 +1,6 @@
 package org.byteworks.xl;
 
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 import java.util.stream.Collectors;
@@ -114,27 +113,6 @@ public class CalculatorInterpreter {
         }
     }
 
-    private List<Node> transform(List<Node> nodes) {
-        List<Node> transformedNodes = new ArrayList<>();
-        for (Node node: nodes) {
-            Node result = transform(node);
-            // TODO dislike!!!
-            if (result != null) {
-                transformedNodes.add(result);
-            }
-            transformedNodes.add(transform(node));
-        }
-        return transformedNodes;
-    }
-
-    private Node transform(Node node) {
-        if (node instanceof CalculatorParser.FunctionDeclarationNode) {
-            functionDeclaration((CalculatorParser.FunctionDeclarationNode) node);
-            return null;
-        }
-        return node;
-    }
-
     private Value evaluateExpression(final CalculatorParser.ExpressionNode expression) {
         if (expression instanceof CalculatorParser.LiteralNode) {
             return literalExpression((CalculatorParser.LiteralNode) expression);
@@ -163,7 +141,7 @@ public class CalculatorInterpreter {
     }
 
     private Value callFunction(final CalculatorParser.FunctionCallNode functionCall) {
-        String functionName = functionCall.getChars();
+        String functionName = functionCall.getName();
         if (functionCall.getArguments() instanceof CalculatorParser.CommaNode) {
             CalculatorParser.CommaNode arguments = (CalculatorParser.CommaNode) functionCall.getArguments();
             Value first = evaluateExpression((CalculatorParser.ExpressionNode) arguments.getLeft());
