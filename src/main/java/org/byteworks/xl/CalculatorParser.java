@@ -100,7 +100,7 @@ public class CalculatorParser extends Parser {
         return transformed;
     }
 
-    private static class EmptyNode extends Node {
+    static class EmptyNode extends Node {
         @Override
         public String toString() {
             return "";
@@ -382,8 +382,8 @@ public class CalculatorParser extends Parser {
 
         @Override
         public String toString() {
-            return parameterTypes.stream().map(Object::toString).collect(Collectors.joining(" ")) + " -> " +
-                    returnTypes.stream().map(Object::toString).collect(Collectors.joining(" "));
+            String params = parameterTypes.isEmpty() ? "->" : parameterTypes.stream().map(Object::toString).collect(Collectors.joining(" ")) + " ->";
+            return params + (returnTypes.isEmpty() ? "" : " ") + returnTypes.stream().map(Object::toString).collect(Collectors.joining(" "));
         }
     }
 

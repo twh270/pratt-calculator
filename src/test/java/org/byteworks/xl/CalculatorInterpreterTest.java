@@ -87,15 +87,13 @@ class CalculatorInterpreterTest {
     @ParameterizedTest(name = "{index} {0}")
     @CsvSource({
             "function call 1, 'f = fn x:Number y:Number -> Number { x + y }\nf(3, 4)', '(Number, Number -> Number): Number, Number\n7: Number\n'",
-            "function call 2, 'f = fn { 3 }', '(f ())'",
-            "function call 3, 'f = fn x:Number -> Number { x * 10 }\nf(6)', '(Number -> Number): Number\n60: Number'",
-            "function call 4, 'f = fn x:Number y:Number z:Number -> Number {x + y + z}\nf(6, 3 * 4, 2)', '(Number, Number, Number -> Number): Number, Number, Number\n20: Number'"
+            "function call 2, 'f = fn -> Number { 3 }\nf()', '(Unit -> Number): Unit\n3: Number\n'",
+            "function call 3, 'f = fn x:Number -> Number { x * 10 }\nf(6)', '(Number -> Number): Number\n60: Number\n'",
+            "function call 4, 'f = fn x:Number y:Number z:Number -> Number {x + y + z}\nf(6, 3 * 4, 2)', '(Number, Number, Number -> Number): Number, Number, Number\n20: Number\n'",
+            "function call 5, 'f = fn -> { }', '(Unit -> Unit): Unit\n'"
     })
     void executesFunctionCall(String name, String code, String expected) {
         String result = execute(code);
-        Type number = testObj.interpreter.getType("Number");
-//        Function fn = testObj.interpreter.getFunction("f", new TypeList(List.of(number, number)));
-//        assertEquals("(Number, Number -> Number)", fn.getSignature().toString());
         assertEquals(expected, result);
     }
 }

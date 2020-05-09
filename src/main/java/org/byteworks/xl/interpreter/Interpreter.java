@@ -15,8 +15,8 @@ public class Interpreter {
     private final Stack<Value> stack = new Stack<>();
     private final Map<String, Type> types = new HashMap<>();
 
-    public Function registerFunction(String name, List<FunctionParameter> functionParameters, Type returnType, FunctionImplementation impl) {
-        Function function = new Function(new FunctionSignature(functionParameters, returnType), impl);
+    public Function registerFunction(String name, List<FunctionParameter> functionParameters, Type parameterType, Type returnType, FunctionImplementation impl) {
+        Function function = new Function(new FunctionSignature(functionParameters, parameterType, returnType), impl);
         Map<Type, Function> bound = functions.computeIfAbsent(name, k -> new HashMap<>());
         bound.put(function.getSignature().getParameterType(), function);
         return function;

@@ -1,6 +1,7 @@
 package org.byteworks.xl;
 
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 import java.util.stream.Collectors;
@@ -18,7 +19,7 @@ import org.byteworks.xl.parser.Node;
 
 public class CalculatorInterpreter {
     private static final String TYPE_NUMBER = "Number";
-    private static final String TYPE_FUNCTION = "Function";
+    private static final String TYPE_UNIT = "Unit";
 
     class InterpretedFunction implements FunctionImplementation {
         private final CalculatorParser.ExpressionNode expression;
@@ -89,18 +90,18 @@ public class CalculatorInterpreter {
     public CalculatorInterpreter() {
         Type number = new SimpleType(TYPE_NUMBER);
         interpreter.registerType(TYPE_NUMBER, new SimpleType(TYPE_NUMBER));
-        Type function = new SimpleType(TYPE_FUNCTION);
-        interpreter.registerType(TYPE_FUNCTION, function);
+        interpreter.registerType(TYPE_UNIT, new SimpleType(TYPE_UNIT));
         List<FunctionParameter> twoNumbers = List.of(new FunctionParameter("x", interpreter.getType(TYPE_NUMBER)), new FunctionParameter("y", interpreter.getType(TYPE_NUMBER)));
         List<FunctionParameter> oneNumber = List.of(new FunctionParameter("x", interpreter.getType(TYPE_NUMBER)));
-        interpreter.registerFunction("add", twoNumbers, number, numericAddition);
-        interpreter.registerFunction("subtract", twoNumbers, number, numericSubtraction);
-        interpreter.registerFunction("multiply", twoNumbers, number, numericMultiplication);
-        interpreter.registerFunction("divide", twoNumbers, number, numericDivision);
-        interpreter.registerFunction("preincrement", oneNumber, number, preIncrement);
-        interpreter.registerFunction("predecrement", oneNumber, number, preDecrement);
-        interpreter.registerFunction("postincrement", oneNumber, number, postIncrement);
-        interpreter.registerFunction("postdecrement", oneNumber, number, postDecrement);
+        TypeList twoNumbersType = new TypeList(List.of(number, number));
+        interpreter.registerFunction("add", twoNumbers, twoNumbersType, number, numericAddition);
+        interpreter.registerFunction("subtract", twoNumbers, twoNumbersType, number, numericSubtraction);
+        interpreter.registerFunction("multiply", twoNumbers, twoNumbersType, number, numericMultiplication);
+        interpreter.registerFunction("divide", twoNumbers, twoNumbersType, number, numericDivision);
+        interpreter.registerFunction("preincrement", oneNumber, number, number, preIncrement);
+        interpreter.registerFunction("predecrement", oneNumber, number, number, preDecrement);
+        interpreter.registerFunction("postincrement", oneNumber, number, number, postIncrement);
+        interpreter.registerFunction("postdecrement", oneNumber, number, number, postDecrement);
     }
 
     public void exec(List<Node> nodes, PrintStream ps) {
@@ -142,35 +143,66 @@ public class CalculatorInterpreter {
 
     private Value callFunction(final CalculatorParser.FunctionCallNode functionCall) {
         String functionName = functionCall.getName();
+        Type parameterType;
+        List<Value> arguments = new ArrayList<>();
         if (functionCall.getArguments() instanceof CalculatorParser.CommaNode) {
-            CalculatorParser.CommaNode arguments = (CalculatorParser.CommaNode) functionCall.getArguments();
-            Value first = evaluateExpression((CalculatorParser.ExpressionNode) arguments.getLeft());
-            Value second = evaluateExpression((CalculatorParser.ExpressionNode) arguments.getRight());
-            Type parameterType = new TypeList(List.of(first.getType(), second.getType()));
-            Function function = interpreter.getFunction(functionName, parameterType);
-            return interpreter.callFunction(function, List.of(first, second));
+            List<CalculatorParser.ExpressionNode> argumentExpressions = flatten((CalculatorParser.CommaNode) functionCall.getArguments());
+            for (CalculatorParser.ExpressionNode argumentExpression: argumentExpressions) {
+                arguments.add(evaluateExpression(argumentExpression));
+            }
+            parameterType = new TypeList(arguments.stream().map(Value::getType).collect(Collectors.toList()));
+        } else if (functionCall.getArguments() instanceof CalculatorParser.EmptyNode) {
+            parameterType = interpreter.getType(TYPE_UNIT);
+        } else {
+            Value argument = evaluateExpression((CalculatorParser.ExpressionNode) functionCall.getArguments());
+            arguments.add(argument);
+            parameterType = argument.getType();
         }
-        throw new IllegalStateException("Don't know how to call function " + functionCall);
+        Function function = interpreter.getFunction(functionName, parameterType);
+        return interpreter.callFunction(function, arguments);
+    }
+
+    private List<CalculatorParser.ExpressionNode> flatten(CalculatorParser.CommaNode arguments) {
+        List<CalculatorParser.ExpressionNode> result = new ArrayList<>();
+        CalculatorParser.ExpressionNode left = (CalculatorParser.ExpressionNode) arguments.getLeft();
+        CalculatorParser.ExpressionNode right = (CalculatorParser.ExpressionNode) arguments.getRight();
+        if (left instanceof CalculatorParser.CommaNode) {
+            result.addAll(flatten((CalculatorParser.CommaNode)left));
+        } else {
+            result.add(left);
+        }
+        if (right instanceof CalculatorParser.CommaNode) {
+            result.addAll(flatten((CalculatorParser.CommaNode)right));
+        } else {
+            result.add(right);
+        }
+        return result;
     }
 
     private Value functionDeclaration(CalculatorParser.FunctionDeclarationNode functionDeclaration) {
         CalculatorParser.FunctionSignatureNode functionSignature = functionDeclaration.getFunctionSignature();
         final List<CalculatorParser.TypeExpressionNode> parameterTypes = functionSignature.getParameterTypes();
         List<FunctionParameter> functionParameters =
-                parameterTypes.stream()
-                .map(it -> new FunctionParameter(
-                        it.getTarget().getChars(),
-                        interpreter.getType(it.getTypeExpression().getChars()))
-                )
-                .collect(Collectors.toList());
+                parameterTypes.stream().map(it -> new FunctionParameter(it.getTarget().getChars(), interpreter.getType(it.getTypeExpression().getChars()))).collect(Collectors.toList());
         final List<CalculatorParser.IdentifierNode> returnTypes = functionSignature.getReturnTypes();
         Type returnType;
-        if (returnTypes.size() == 1) {
+        if (returnTypes.size() == 0) {
+            returnType = interpreter.getType(TYPE_UNIT);
+        } else if (returnTypes.size() == 1) {
             returnType = new SimpleType(returnTypes.get(0).getChars());
         } else {
             returnType = new TypeList(returnTypes.stream().map(it -> interpreter.getType(it.getChars())).collect(Collectors.toList()));
         }
-        return new Value(new Function(new FunctionSignature(functionParameters, returnType), new InterpretedFunction(functionDeclaration.getBody())), interpreter.getType(TYPE_FUNCTION));
+        Type parameterType;
+        if (functionParameters.size() == 0) {
+            parameterType = interpreter.getType(TYPE_UNIT);
+        } else if (functionParameters.size() == 1) {
+            parameterType = functionParameters.get(0).getType();
+        } else {
+            parameterType = new TypeList(functionParameters.stream().map(it -> it.getType()).collect(Collectors.toList()));
+        }
+        Function function = new Function(new FunctionSignature(functionParameters, parameterType, returnType), new InterpretedFunction(functionDeclaration.getBody()));
+        return new Value(function, function.getSignature().getParameterType());
     }
 
     private Value binaryOperatorExpression(final CalculatorParser.BinaryOpNode binaryOp) {
@@ -203,7 +235,7 @@ public class CalculatorInterpreter {
             Function function = (Function) value.getValue();
             String functionName = identifierNode.getChars();
             FunctionSignature signature = function.getSignature();
-            value = new Value(interpreter.registerFunction(functionName, function.getSignature().getFunctionParameters(), signature.getReturnType(), function.getImpl()),
+            value = new Value(interpreter.registerFunction(functionName, function.getSignature().getFunctionParameters(), signature.getParameterType(), signature.getReturnType(), function.getImpl()),
                     function.getSignature().getParameterType());
         }
         interpreter.assignVariableValue(identifierNode.getChars(), value);
@@ -270,8 +302,6 @@ public class CalculatorInterpreter {
         Value value = interpreter.identifier(identifierName);
         if (value.getType().equals(interpreter.getType(TYPE_NUMBER))) {
             return value;
-        } else if (value.getType().equals(interpreter.getType(TYPE_FUNCTION))) {
-//            Value parameter = evaluateExpression(
         }
         return interpreter.identifier(identifierName);
     }
