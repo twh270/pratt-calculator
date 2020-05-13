@@ -13,6 +13,7 @@ import org.byteworks.xl.lexer.TokenType;
 public class Parser {
     private final Lexer lexer;
     private final PrintStream debugStream;
+    private final ParseContext parseContext;
 
     private static class ParserRule {
         final Pair<Integer, Integer> precedencePair;
@@ -21,7 +22,7 @@ public class Parser {
 
         public ParserRule(final Pair<Integer, Integer> precedencePair, final PrefixParser parser, final InfixParser infixParser) {
             this.precedencePair = precedencePair;
-            prefixParser = parser;
+            this.prefixParser = parser;
             this.infixParser = infixParser;
         }
     }
@@ -31,6 +32,7 @@ public class Parser {
     public Parser(Lexer lexer, PrintStream debugStream) {
         this.lexer = lexer;
         this.debugStream = debugStream;
+        this.parseContext = new ParseContext(this, lexer, debugStream);
     }
 
     public void registerParserRule(TokenType tokenType, Pair<Integer, Integer> precedencePair, PrefixParser prefixParser, InfixParser infixParser) {
@@ -42,16 +44,15 @@ public class Parser {
 
     public List<Node> parse() {
         List<Node> nodes = new ArrayList<>();
-        ParseContext parseContext = new ParseContext(this, lexer, debugStream);
         while(lexer.hasMoreTokens()) {
-            nodes.add(parse(parseContext, 0));
+            nodes.add(parse(0));
         }
         return nodes;
     }
 
-    public <T extends Node> T parse(final ParseContext parseContext, final int precedence) {
+    public <T extends Node> T parse(final int precedence) {
         Token token = parseContext.lexer.next();
-        Node node = parseFirstNode(parseContext, token);
+        Node node = parseFirstNode(token);
         while (shouldParseInfix(precedence)) {
             token = parseContext.lexer.next();
             InfixParser infixParser = infixParser(token);
@@ -72,7 +73,7 @@ public class Parser {
         return precedencePair.getLeft() >= precedence;
     }
 
-    private Node parseFirstNode(ParseContext parseContext, Token token) {
+    private Node parseFirstNode(Token token) {
         if (prefixParser(token) != null) {
             return prefixParser(token).parse(parseContext, token);
         }

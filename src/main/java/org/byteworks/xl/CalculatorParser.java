@@ -85,7 +85,7 @@ public class CalculatorParser extends Parser {
     }
 
     private static <T extends Node> T require(ParseContext parseContext, int precedence, Class clazz, String error) {
-        Node node = parseContext.parser.parse(parseContext, precedence);
+        Node node = parseContext.parse(precedence);
         if (!(clazz.isAssignableFrom(node.getClass()))) {
             throw new IllegalStateException(error + "(got " + node.getClass().getSimpleName() + "='" + node + "')");
         }
@@ -398,7 +398,7 @@ public class CalculatorParser extends Parser {
 
         @Override
         public Node parse(ParseContext parseContext, Token token) {
-            return null;
+            return new EmptyNode();
         }
     }
 
@@ -406,7 +406,7 @@ public class CalculatorParser extends Parser {
 
         @Override
         public Node parse(ParseContext parseContext, Token token) {
-            return parseContext.parser.parse(parseContext, PrecedencePairs.EOL.getRight());
+            return parseContext.parse(PrecedencePairs.EOL.getRight());
         }
     }
 
@@ -458,7 +458,7 @@ public class CalculatorParser extends Parser {
 
         @Override
         public Node parse(ParseContext parseContext, Token token) {
-            Node expr = parseContext.parser.parse(parseContext, PrecedencePairs.PARENS.getRight());
+            Node expr = parseContext.parse(PrecedencePairs.PARENS.getRight());
             return expr;
         }
     }
@@ -610,7 +610,7 @@ public class CalculatorParser extends Parser {
 
         @Override
         public Node parse(ParseContext parseContext, Node node) {
-            Node right = parseContext.parser.parse(parseContext, PrecedencePairs.COMMA.getRight());
+            Node right = parseContext.parse(PrecedencePairs.COMMA.getRight());
             return new CommaNode(node, right);
         }
     }
@@ -627,7 +627,7 @@ public class CalculatorParser extends Parser {
 
         @Override
         public Node parse(final ParseContext parseContext, final Node node) {
-            Node arguments = parseContext.parser.parse(parseContext, PrecedencePairs.PARENS.getRight());
+            Node arguments = parseContext.parse(PrecedencePairs.PARENS.getRight());
             return new FunctionCallNode(node.toString(), arguments);
         }
     }

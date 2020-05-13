@@ -1,8 +1,8 @@
 package org.byteworks.xl.parser;
 
-import org.byteworks.xl.lexer.Lexer;
-
 import java.io.PrintStream;
+
+import org.byteworks.xl.lexer.Lexer;
 
 public class ParseContext {
     public final Parser parser;
@@ -13,5 +13,9 @@ public class ParseContext {
         this.parser = parser;
         this.lexer = lexer;
         this.debugStream = debug;
+    }
+
+    public Node parse(int precedence) {
+        return parser.parse(precedence);
     }
 }
