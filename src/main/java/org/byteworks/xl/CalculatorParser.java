@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.byteworks.xl.lexer.Lexer;
@@ -103,16 +104,6 @@ public class CalculatorParser extends Parser {
             throw new IllegalStateException(error + "(got " + token + ")");
         }
         return lexer.next();
-    }
-
-    private static <T extends Node> List<T> parseNodeList(ParseContext parseContext, Class clazz, Function<ParseContext, T>elementParser, TokenType... terminators) {
-        List<T> nodes = new ArrayList<>();
-        while(!(parseContext.lexer.peekIs(terminators))) {
-            T node = elementParser.apply(parseContext);
-            require(node, clazz, "Got illegal node type parsing a list of node type " + clazz.getSimpleName());
-            nodes.add(node);
-        }
-        return nodes;
     }
 
     @Override
@@ -397,9 +388,9 @@ public class CalculatorParser extends Parser {
         private final List<TypeExpressionNode> parameterTypes;
         private final List<IdentifierNode> returnTypes;
 
-        FunctionSignatureNode(final List<TypeExpressionNode> parameterTypes, final List<IdentifierNode> returnTypes) {
-            this.parameterTypes = parameterTypes;
-            this.returnTypes = returnTypes;
+        FunctionSignatureNode(final NodeList<TypeExpressionNode> parameterTypes, final NodeList<IdentifierNode> returnTypes) {
+            this.parameterTypes = parameterTypes.getNodes();
+            this.returnTypes = returnTypes.getNodes();
         }
 
         List<TypeExpressionNode> getParameterTypes() {
@@ -513,7 +504,7 @@ public class CalculatorParser extends Parser {
                 this.error = error;
             }
 
-            protected Class expectedClass() {
+            Class expectedClass() {
                 return clazz;
             }
 
@@ -539,6 +530,25 @@ public class CalculatorParser extends Parser {
             }
         }
 
+        static class Sequence<T extends Node> extends NodeParseRule<NodeList<T>> {
+            private final NodeParseRule<T> elementRule;
+            private final Predicate<ParseContext> terminationCondition;
+
+            Sequence(final NodeParseRule<T> elementRule, final Predicate<ParseContext> terminationCondition) {
+                this.elementRule = elementRule;
+                this.terminationCondition = terminationCondition;
+            }
+
+            @Override
+            public NodeList<T> apply(final ParseContext parseContext) {
+                List<T> nodes = new ArrayList<>();
+                while(!(terminationCondition.test(parseContext))) {
+                    nodes.add(elementRule.apply(parseContext));
+                }
+                return new NodeList<T>(nodes);
+            }
+        }
+
         static class Compose<T extends Node, U extends Node, R extends Node> extends NodeParseRule<R> {
             private final NodeParseRule<T> left;
             private final NodeParseRule<U> right;
@@ -559,29 +569,57 @@ public class CalculatorParser extends Parser {
         }
     }
 
+    static class NodeList<T extends Node> extends Node {
+        private final List<T> nodes;
+
+        NodeList(final List<T> nodes) {
+            this.nodes = nodes;
+        }
+
+        public List<T> getNodes() {
+            return nodes;
+        }
+    }
+
+    private static <T extends Node> List<T> parseNodeList(ParseContext parseContext, Class clazz, Function<ParseContext, T>elementParser, TokenType... terminators) {
+        List<T> nodes = new ArrayList<>();
+        while(!(parseContext.lexer.peekIs(terminators))) {
+            T node = elementParser.apply(parseContext);
+            require(node, clazz, "Got illegal node type parsing a list of node type " + clazz.getSimpleName());
+            nodes.add(node);
+        }
+        return nodes;
+    }
+
     static class FunctionDefinitionPrefixParser implements PrefixParser {
         private final NodeParseRule.Require<IdentifierNode> returnTypeParser = new NodeParseRule.Require<>(
                 PrecedencePairs.IDENTIFIER.getRight(),
                 IdentifierNode.class, "Function definition return type(s) must be identifiers");
-
-        private TypeExpressionNode parseTypeExpression(ParseContext parseContext) {
-            IdentifierNode name = require(parseContext, PrecedencePairs.IDENTIFIER.getRight(), IdentifierNode.class, "Function definition type expression must be of the form identifier:type");
-            require(parseContext.lexer, TokenType.COLON, "Function definition type expression must be of the form identifier:type");
-            IdentifierNode type = require(parseContext, PrecedencePairs.IDENTIFIER.getRight(), IdentifierNode.class, "Function definition type expression must be of the form identifier:type");
-            return new TypeExpressionNode(name, type);
-        }
-
-        private IdentifierNode parseReturnType(ParseContext parseContext) {
-            return require(parseContext, PrecedencePairs.IDENTIFIER.getRight(), IdentifierNode.class, "Function definition return type(s) must be identifiers");
-        }
+        private final NodeParseRule.Compose<IdentifierNode, IdentifierNode, TypeExpressionNode> parameterTypeParser =
+                new NodeParseRule.Compose<>(
+                        new NodeParseRule.RequireWithTerminator<>(
+                                PrecedencePairs.IDENTIFIER.getRight(),
+                                IdentifierNode.class,
+                                "Function definition type expression must be of the form identifier:type",
+                                TokenType.COLON),
+                        new NodeParseRule.Require<>(
+                                PrecedencePairs.IDENTIFIER.getRight(),
+                                IdentifierNode.class,
+                                "Function definition type expression must be of the form identifier:type"),
+                        TypeExpressionNode::new);
+        private final NodeParseRule.Compose<NodeList<TypeExpressionNode>, NodeList<IdentifierNode>, FunctionSignatureNode> functionSignatureParser =
+                new NodeParseRule.Compose<>(
+                        new NodeParseRule.Sequence<>(parameterTypeParser, (ParseContext pc) -> pc.lexer.consumeIf(TokenType.ARROW)),
+                        new NodeParseRule.Sequence<>(returnTypeParser, (ParseContext pc) -> pc.lexer.peekIs(TokenType.LBRACE)),
+                        FunctionSignatureNode::new);
+        private final NodeParseRule.Compose<FunctionSignatureNode, ExpressionNode, FunctionDeclarationNode> functionDeclarationParser = new NodeParseRule.Compose<>(
+                functionSignatureParser,
+                new NodeParseRule.Require<>(0, ExpressionNode.class, "A function implementation must be an expression"),
+                FunctionDeclarationNode::new);
 
         @Override
         public Node parse(ParseContext parseContext, Token token) {
-            List<TypeExpressionNode> parameterTypes = parseNodeList(parseContext, TypeExpressionNode.class, this::parseTypeExpression, TokenType.ARROW);
-            require(parseContext.lexer, TokenType.ARROW, "Expecting an arrow ('->') after parameter types in function definition");
-            List<IdentifierNode> returnTypes = parseNodeList(parseContext, IdentifierNode.class, returnTypeParser, TokenType.LBRACE, TokenType.ASSIGNMENT);
-            ExpressionNode body = require(parseContext, 0, ExpressionNode.class, "A function implementation must be an expression");
-            return new FunctionDeclarationNode(new FunctionSignatureNode(parameterTypes, returnTypes), body);
+            return functionDeclarationParser.apply(parseContext);
         }
     }
 
