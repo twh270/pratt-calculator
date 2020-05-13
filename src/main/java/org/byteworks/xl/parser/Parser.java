@@ -57,7 +57,7 @@ public class Parser {
             token = parseContext.lexer.next();
             InfixParser infixParser = infixParser(token);
             if (infixParser == null) {
-                throw new IllegalStateException("Got no infix parser for token " + token.toString());
+                throw new IllegalStateException("Got no infix parser for token " + token.toString() + ", first node is " + node);
             }
             node = infixParser.parse(parseContext, node);
         }
@@ -77,7 +77,7 @@ public class Parser {
         if (prefixParser(token) != null) {
             return prefixParser(token).parse(parseContext, token);
         }
-        throw new IllegalArgumentException("Invalid token " + token);
+        throw new IllegalArgumentException("No prefix parser registered for token " + token);
     }
 
     private Pair<Integer, Integer> precedence(Token token) {

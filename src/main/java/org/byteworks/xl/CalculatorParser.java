@@ -3,6 +3,8 @@ package org.byteworks.xl;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.byteworks.xl.lexer.Lexer;
@@ -101,6 +103,16 @@ public class CalculatorParser extends Parser {
             throw new IllegalStateException(error + "(got " + token + ")");
         }
         return lexer.next();
+    }
+
+    private static <T extends Node> List<T> parseNodeList(ParseContext parseContext, Class clazz, Function<ParseContext, T>elementParser, TokenType... terminators) {
+        List<T> nodes = new ArrayList<>();
+        while(!(parseContext.lexer.peekIs(terminators))) {
+            T node = elementParser.apply(parseContext);
+            require(node, clazz, "Got illegal node type parsing a list of node type " + clazz.getSimpleName());
+            nodes.add(node);
+        }
+        return nodes;
     }
 
     @Override
@@ -469,8 +481,7 @@ public class CalculatorParser extends Parser {
 
         @Override
         public Node parse(ParseContext parseContext, Token token) {
-            Node expr = parseContext.parse(PrecedencePairs.PARENS.getRight());
-            return expr;
+            return parseContext.parse(PrecedencePairs.PARENS.getRight());
         }
     }
 
@@ -490,7 +501,68 @@ public class CalculatorParser extends Parser {
         }
     }
 
+    private abstract static class NodeParseRule<T extends Node> implements Function<ParseContext, T> {
+        static class Require<T extends Node> extends NodeParseRule<T> {
+            private final int precedence;
+            private final Class clazz;
+            private final String error;
+
+            Require(final int precedence, final Class clazz, final String error) {
+                this.precedence = precedence;
+                this.clazz = clazz;
+                this.error = error;
+            }
+
+            protected Class expectedClass() {
+                return clazz;
+            }
+
+            @Override
+            public T apply(final ParseContext parseContext) {
+                return require(parseContext, precedence, clazz, error);
+            }
+        }
+
+        static class RequireWithTerminator<T extends Node> extends Require<T> {
+            private final TokenType terminator;
+
+            RequireWithTerminator(final int precedence, final Class clazz, final String error, TokenType terminator) {
+                super(precedence, clazz, error);
+                this.terminator = terminator;
+            }
+
+            @Override
+            public T apply(final ParseContext parseContext) {
+                T node = super.apply(parseContext);
+                require(parseContext.lexer, terminator, "Expecting " + expectedClass().getSimpleName() + " followed by " + terminator);
+                return node;
+            }
+        }
+
+        static class Compose<T extends Node, U extends Node, R extends Node> extends NodeParseRule<R> {
+            private final NodeParseRule<T> left;
+            private final NodeParseRule<U> right;
+            private final BiFunction<T, U, R> composer;
+
+            Compose(final NodeParseRule<T> left, final NodeParseRule<U> right, final BiFunction<T, U, R> composer) {
+                this.left = left;
+                this.right = right;
+                this.composer = composer;
+            }
+
+            @Override
+            public R apply(final ParseContext context) {
+                T leftNode = left.apply(context);
+                U rightNode = right.apply(context);
+                return composer.apply(leftNode, rightNode);
+            }
+        }
+    }
+
     static class FunctionDefinitionPrefixParser implements PrefixParser {
+        private final NodeParseRule.Require<IdentifierNode> returnTypeParser = new NodeParseRule.Require<>(
+                PrecedencePairs.IDENTIFIER.getRight(),
+                IdentifierNode.class, "Function definition return type(s) must be identifiers");
 
         private TypeExpressionNode parseTypeExpression(ParseContext parseContext) {
             IdentifierNode name = require(parseContext, PrecedencePairs.IDENTIFIER.getRight(), IdentifierNode.class, "Function definition type expression must be of the form identifier:type");
@@ -499,33 +571,28 @@ public class CalculatorParser extends Parser {
             return new TypeExpressionNode(name, type);
         }
 
+        private IdentifierNode parseReturnType(ParseContext parseContext) {
+            return require(parseContext, PrecedencePairs.IDENTIFIER.getRight(), IdentifierNode.class, "Function definition return type(s) must be identifiers");
+        }
+
         @Override
         public Node parse(ParseContext parseContext, Token token) {
-            List<TypeExpressionNode> parameterTypes = new ArrayList<>();
-            while (!parseContext.lexer.consumeIf(TokenType.ARROW)) {
-                // TODO maybe param and return type is an infix parser on COLON and we expect parse(lexer, 0) to return a TypeExpressionNode
-                TypeExpressionNode typeExpressionNode = parseTypeExpression(parseContext);
-                parameterTypes.add(typeExpressionNode);
-            }
-            List<IdentifierNode> returnTypes = new ArrayList<>();
-            while (!(parseContext.lexer.peekIs(TokenType.LBRACE, TokenType.ASSIGNMENT))) {
-                IdentifierNode node = require(parseContext, PrecedencePairs.IDENTIFIER.getRight(), IdentifierNode.class, "Function definition return type(s) must be identifiers");
-                returnTypes.add(node);
-            }
+            List<TypeExpressionNode> parameterTypes = parseNodeList(parseContext, TypeExpressionNode.class, this::parseTypeExpression, TokenType.ARROW);
+            require(parseContext.lexer, TokenType.ARROW, "Expecting an arrow ('->') after parameter types in function definition");
+            List<IdentifierNode> returnTypes = parseNodeList(parseContext, IdentifierNode.class, returnTypeParser, TokenType.LBRACE, TokenType.ASSIGNMENT);
             ExpressionNode body = require(parseContext, 0, ExpressionNode.class, "A function implementation must be an expression");
             return new FunctionDeclarationNode(new FunctionSignatureNode(parameterTypes, returnTypes), body);
         }
     }
 
     static class LeftBracePrefixParser implements PrefixParser {
+        private ExpressionNode parseExpression(ParseContext parseContext) {
+            return require(parseContext, 0, ExpressionNode.class, "All elements of an expression list enclosed by { } must be an expression");
+        }
 
         @Override
         public Node parse(ParseContext parseContext, Token token) {
-            List<ExpressionNode> nodes = new ArrayList<>();
-            while (parseContext.lexer.peek().getType() != TokenType.RBRACE) {
-                ExpressionNode node = require(parseContext, 0, ExpressionNode.class, "All elements of an expression list enclosed by { } must be an expression");
-                nodes.add(node);
-            }
+            List<ExpressionNode> nodes = parseNodeList(parseContext, ExpressionNode.class, this::parseExpression, TokenType.RBRACE);
             parseContext.lexer.next();
             return new ExpressionListNode(nodes);
         }
