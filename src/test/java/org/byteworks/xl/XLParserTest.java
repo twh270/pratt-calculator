@@ -11,7 +11,7 @@ import org.byteworks.xl.parser.Parser;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-class CalculatorParserTest {
+class XLParserTest {
 
     @ParameterizedTest(name = "{index} {0}")
     @CsvSource({
@@ -42,7 +42,7 @@ class CalculatorParserTest {
     })
     void parsesInput(String name, String input, String expected) {
         Lexer lexer = new Lexer(input);
-        Parser parser = CalculatorParser.createParser(lexer, System.out);
+        Parser parser = XLParser.createParser(lexer, System.out);
         List<Node> ast = parser.parse();
         String result = ast.stream().map(Object::toString).collect(Collectors.joining(", "));
         assertEquals(expected, result);

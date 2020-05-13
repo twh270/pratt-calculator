@@ -16,20 +16,20 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-class CalculatorInterpreterTest {
+class XLInterpreterTest {
 
     private List<Node> nodes;
     private PrintStream ps;
-    private CalculatorInterpreter testObj;
+    private XLInterpreter testObj;
     private ByteArrayOutputStream baos;
 
     private void setUp(String input) {
         Lexer lexer = new Lexer(input);
-        Parser parser = CalculatorParser.createParser(lexer, System.out);
+        Parser parser = XLParser.createParser(lexer, System.out);
         nodes = parser.parse();
         baos = new ByteArrayOutputStream();
         ps = new PrintStream(baos);
-        testObj = new CalculatorInterpreter();
+        testObj = new XLInterpreter();
     }
 
     private String execute(String input) {

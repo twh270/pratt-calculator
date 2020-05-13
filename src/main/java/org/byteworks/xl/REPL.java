@@ -9,7 +9,7 @@ import org.byteworks.xl.parser.Parser;
 
 public class REPL {
     public static void main(String[] args) {
-        CalculatorInterpreter interpreter = new CalculatorInterpreter();
+        XLInterpreter interpreter = new XLInterpreter();
 
         Scanner scanner = new Scanner(System.in);
         while(true) {

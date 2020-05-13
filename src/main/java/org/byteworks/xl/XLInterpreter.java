@@ -17,14 +17,14 @@ import org.byteworks.xl.interpreter.TypeList;
 import org.byteworks.xl.interpreter.Value;
 import org.byteworks.xl.parser.Node;
 
-public class CalculatorInterpreter {
+public class XLInterpreter {
     private static final String TYPE_NUMBER = "Number";
     private static final String TYPE_UNIT = "Unit";
 
     class InterpretedFunction implements FunctionImplementation {
-        private final CalculatorParser.ExpressionNode expression;
+        private final XLParser.ExpressionNode expression;
 
-        InterpretedFunction(final CalculatorParser.ExpressionNode expression) {
+        InterpretedFunction(final XLParser.ExpressionNode expression) {
             this.expression = expression;
         }
 
@@ -87,7 +87,7 @@ public class CalculatorInterpreter {
         return new Value(operand - 1, interpreter.getType(TYPE_NUMBER));
     };
 
-    public CalculatorInterpreter() {
+    public XLInterpreter() {
         Type number = new SimpleType(TYPE_NUMBER);
         interpreter.registerType(TYPE_NUMBER, new SimpleType(TYPE_NUMBER));
         interpreter.registerType(TYPE_UNIT, new SimpleType(TYPE_UNIT));
@@ -106,55 +106,55 @@ public class CalculatorInterpreter {
 
     public void exec(List<Node> nodes, PrintStream ps) {
         for (Node node : nodes) {
-            if (node instanceof CalculatorParser.ExpressionNode) {
-                ps.println(evaluateExpression((CalculatorParser.ExpressionNode) node));
+            if (node instanceof XLParser.ExpressionNode) {
+                ps.println(evaluateExpression((XLParser.ExpressionNode) node));
             } else {
                 ps.println(node);
             }
         }
     }
 
-    private Value evaluateExpression(final CalculatorParser.ExpressionNode expression) {
-        if (expression instanceof CalculatorParser.LiteralNode) {
-            return literalExpression((CalculatorParser.LiteralNode) expression);
-        } else if (expression instanceof CalculatorParser.IdentifierNode) {
-            return identifierExpression((CalculatorParser.IdentifierNode) expression);
-        } else if (expression instanceof CalculatorParser.UnaryOpNode) {
-            return unaryOperatorExpression((CalculatorParser.UnaryOpNode) expression);
-        } else if (expression instanceof CalculatorParser.BinaryOpNode) {
-            return binaryOperatorExpression((CalculatorParser.BinaryOpNode) expression);
-        } else if (expression instanceof CalculatorParser.FunctionDeclarationNode) {
-            return functionDeclaration((CalculatorParser.FunctionDeclarationNode) expression);
-        } else if (expression instanceof CalculatorParser.FunctionCallNode) {
-            return callFunction((CalculatorParser.FunctionCallNode) expression);
-        } else if (expression instanceof CalculatorParser.ExpressionListNode) {
-            return expressionList((CalculatorParser.ExpressionListNode) expression);
+    private Value evaluateExpression(final XLParser.ExpressionNode expression) {
+        if (expression instanceof XLParser.LiteralNode) {
+            return literalExpression((XLParser.LiteralNode) expression);
+        } else if (expression instanceof XLParser.IdentifierNode) {
+            return identifierExpression((XLParser.IdentifierNode) expression);
+        } else if (expression instanceof XLParser.UnaryOpNode) {
+            return unaryOperatorExpression((XLParser.UnaryOpNode) expression);
+        } else if (expression instanceof XLParser.BinaryOpNode) {
+            return binaryOperatorExpression((XLParser.BinaryOpNode) expression);
+        } else if (expression instanceof XLParser.FunctionDeclarationNode) {
+            return functionDeclaration((XLParser.FunctionDeclarationNode) expression);
+        } else if (expression instanceof XLParser.FunctionCallNode) {
+            return callFunction((XLParser.FunctionCallNode) expression);
+        } else if (expression instanceof XLParser.ExpressionListNode) {
+            return expressionList((XLParser.ExpressionListNode) expression);
         }
         throw new IllegalStateException("Don't know how to evaluate expression " + expression);
     }
 
-    private Value expressionList(final CalculatorParser.ExpressionListNode expressionList) {
+    private Value expressionList(final XLParser.ExpressionListNode expressionList) {
         Value result = null;
-        for(CalculatorParser.ExpressionNode expression: expressionList.getList()) {
+        for(XLParser.ExpressionNode expression: expressionList.getList()) {
             result = evaluateExpression(expression);
         }
         return result;
     }
 
-    private Value callFunction(final CalculatorParser.FunctionCallNode functionCall) {
+    private Value callFunction(final XLParser.FunctionCallNode functionCall) {
         String functionName = functionCall.getName();
         Type parameterType;
         List<Value> arguments = new ArrayList<>();
-        if (functionCall.getArguments() instanceof CalculatorParser.CommaNode) {
-            List<CalculatorParser.ExpressionNode> argumentExpressions = flatten((CalculatorParser.CommaNode) functionCall.getArguments());
-            for (CalculatorParser.ExpressionNode argumentExpression: argumentExpressions) {
+        if (functionCall.getArguments() instanceof XLParser.CommaNode) {
+            List<XLParser.ExpressionNode> argumentExpressions = flatten((XLParser.CommaNode) functionCall.getArguments());
+            for (XLParser.ExpressionNode argumentExpression: argumentExpressions) {
                 arguments.add(evaluateExpression(argumentExpression));
             }
             parameterType = new TypeList(arguments.stream().map(Value::getType).collect(Collectors.toList()));
-        } else if (functionCall.getArguments() instanceof CalculatorParser.EmptyNode) {
+        } else if (functionCall.getArguments() instanceof XLParser.EmptyNode) {
             parameterType = interpreter.getType(TYPE_UNIT);
         } else {
-            Value argument = evaluateExpression((CalculatorParser.ExpressionNode) functionCall.getArguments());
+            Value argument = evaluateExpression((XLParser.ExpressionNode) functionCall.getArguments());
             arguments.add(argument);
             parameterType = argument.getType();
         }
@@ -162,29 +162,29 @@ public class CalculatorInterpreter {
         return interpreter.callFunction(function, arguments);
     }
 
-    private List<CalculatorParser.ExpressionNode> flatten(CalculatorParser.CommaNode arguments) {
-        List<CalculatorParser.ExpressionNode> result = new ArrayList<>();
-        CalculatorParser.ExpressionNode left = (CalculatorParser.ExpressionNode) arguments.getLeft();
-        CalculatorParser.ExpressionNode right = (CalculatorParser.ExpressionNode) arguments.getRight();
-        if (left instanceof CalculatorParser.CommaNode) {
-            result.addAll(flatten((CalculatorParser.CommaNode)left));
+    private List<XLParser.ExpressionNode> flatten(XLParser.CommaNode arguments) {
+        List<XLParser.ExpressionNode> result = new ArrayList<>();
+        XLParser.ExpressionNode left = (XLParser.ExpressionNode) arguments.getLeft();
+        XLParser.ExpressionNode right = (XLParser.ExpressionNode) arguments.getRight();
+        if (left instanceof XLParser.CommaNode) {
+            result.addAll(flatten((XLParser.CommaNode)left));
         } else {
             result.add(left);
         }
-        if (right instanceof CalculatorParser.CommaNode) {
-            result.addAll(flatten((CalculatorParser.CommaNode)right));
+        if (right instanceof XLParser.CommaNode) {
+            result.addAll(flatten((XLParser.CommaNode)right));
         } else {
             result.add(right);
         }
         return result;
     }
 
-    private Value functionDeclaration(CalculatorParser.FunctionDeclarationNode functionDeclaration) {
-        CalculatorParser.FunctionSignatureNode functionSignature = functionDeclaration.getFunctionSignature();
-        final List<CalculatorParser.TypeExpressionNode> parameterTypes = functionSignature.getParameterTypes();
+    private Value functionDeclaration(XLParser.FunctionDeclarationNode functionDeclaration) {
+        XLParser.FunctionSignatureNode functionSignature = functionDeclaration.getFunctionSignature();
+        final List<XLParser.TypeExpressionNode> parameterTypes = functionSignature.getParameterTypes();
         List<FunctionParameter> functionParameters =
                 parameterTypes.stream().map(it -> new FunctionParameter(it.getTarget().getChars(), interpreter.getType(it.getTypeExpression().getChars()))).collect(Collectors.toList());
-        final List<CalculatorParser.IdentifierNode> returnTypes = functionSignature.getReturnTypes();
+        final List<XLParser.IdentifierNode> returnTypes = functionSignature.getReturnTypes();
         Type returnType;
         if (returnTypes.size() == 0) {
             returnType = interpreter.getType(TYPE_UNIT);
@@ -205,29 +205,29 @@ public class CalculatorInterpreter {
         return new Value(function, function.getSignature().getParameterType());
     }
 
-    private Value binaryOperatorExpression(final CalculatorParser.BinaryOpNode binaryOp) {
-        CalculatorParser.ExpressionNode lhs = binaryOp.getLhs();
-        CalculatorParser.ExpressionNode rhs = binaryOp.getRhs();
-        if (binaryOp instanceof CalculatorParser.AssignmentNode) {
-            return callAssignment(binaryOp, (CalculatorParser.IdentifierNode) lhs, rhs);
+    private Value binaryOperatorExpression(final XLParser.BinaryOpNode binaryOp) {
+        XLParser.ExpressionNode lhs = binaryOp.getLhs();
+        XLParser.ExpressionNode rhs = binaryOp.getRhs();
+        if (binaryOp instanceof XLParser.AssignmentNode) {
+            return callAssignment(binaryOp, (XLParser.IdentifierNode) lhs, rhs);
         }
         Value left = evaluateExpression(lhs);
         Value right = evaluateExpression(rhs);
-        if (binaryOp instanceof CalculatorParser.PlusNode) {
+        if (binaryOp instanceof XLParser.PlusNode) {
             return callBinaryNumericFunction(left, right, "add");
-        } else if (binaryOp instanceof CalculatorParser.MinusNode) {
+        } else if (binaryOp instanceof XLParser.MinusNode) {
             return callBinaryNumericFunction(left, right, "subtract");
-        } else if (binaryOp instanceof CalculatorParser.MultiplyNode) {
+        } else if (binaryOp instanceof XLParser.MultiplyNode) {
             return callBinaryNumericFunction(left, right, "multiply");
-        } else if (binaryOp instanceof CalculatorParser.DivideNode) {
+        } else if (binaryOp instanceof XLParser.DivideNode) {
             return callBinaryNumericFunction(left, right, "divide");
         } else {
             throw new IllegalStateException("Don't know \nhow to evaluate binary operator " + binaryOp.getClass().getSimpleName() + " in expression " + binaryOp);
         }
     }
 
-    private Value callAssignment(final CalculatorParser.BinaryOpNode binaryOp, final CalculatorParser.IdentifierNode identifierNode, final CalculatorParser.ExpressionNode rhs) {
-        if (!(binaryOp.getLhs() instanceof CalculatorParser.IdentifierNode)) {
+    private Value callAssignment(final XLParser.BinaryOpNode binaryOp, final XLParser.IdentifierNode identifierNode, final XLParser.ExpressionNode rhs) {
+        if (!(binaryOp.getLhs() instanceof XLParser.IdentifierNode)) {
             throw new IllegalStateException("The left hand side of an assignment must be an identifier in expression " + binaryOp);
         }
         Value value = evaluateExpression(rhs);
@@ -261,35 +261,35 @@ public class CalculatorInterpreter {
         }
     }
 
-    private Value unaryOperatorExpression(final CalculatorParser.UnaryOpNode unaryOp) {
+    private Value unaryOperatorExpression(final XLParser.UnaryOpNode unaryOp) {
         Value operand = evaluateExpression(unaryOp.getExpr());
         checkType(operand.getType(), interpreter.getType(TYPE_NUMBER), "Unary operator expected a %s but got %s in expression " + unaryOp);
-        if (unaryOp instanceof CalculatorParser.NegativeSignedNode) {
+        if (unaryOp instanceof XLParser.NegativeSignedNode) {
             return new Value(-((Long) operand.getValue()), interpreter.getType(TYPE_NUMBER));
-        } else if (unaryOp instanceof CalculatorParser.PositiveSignedNode) {
+        } else if (unaryOp instanceof XLParser.PositiveSignedNode) {
             return new Value(operand.getValue(), interpreter.getType(TYPE_NUMBER));
-        } else if (unaryOp instanceof CalculatorParser.PreIncrementNode) {
+        } else if (unaryOp instanceof XLParser.PreIncrementNode) {
             Value result = callUnaryNumericFunction(operand, "preincrement");
-            if (unaryOp.getExpr() instanceof CalculatorParser.IdentifierNode) {
-                interpreter.assignVariableValue(((CalculatorParser.IdentifierNode) unaryOp.getExpr()).getChars(), result);
+            if (unaryOp.getExpr() instanceof XLParser.IdentifierNode) {
+                interpreter.assignVariableValue(((XLParser.IdentifierNode) unaryOp.getExpr()).getChars(), result);
             }
             return result;
-        } else if (unaryOp instanceof CalculatorParser.PreDecrementNode) {
+        } else if (unaryOp instanceof XLParser.PreDecrementNode) {
             Value result = callUnaryNumericFunction(operand, "predecrement");
-            if (unaryOp.getExpr() instanceof CalculatorParser.IdentifierNode) {
-                interpreter.assignVariableValue(((CalculatorParser.IdentifierNode) unaryOp.getExpr()).getChars(), result);
+            if (unaryOp.getExpr() instanceof XLParser.IdentifierNode) {
+                interpreter.assignVariableValue(((XLParser.IdentifierNode) unaryOp.getExpr()).getChars(), result);
             }
             return result;
-        } else if (unaryOp instanceof CalculatorParser.PostIncrementNode) {
+        } else if (unaryOp instanceof XLParser.PostIncrementNode) {
             Value result = callUnaryNumericFunction(operand, "postincrement");
-            if (unaryOp.getExpr() instanceof CalculatorParser.IdentifierNode) {
-                interpreter.assignVariableValue(((CalculatorParser.IdentifierNode) unaryOp.getExpr()).getChars(), result);
+            if (unaryOp.getExpr() instanceof XLParser.IdentifierNode) {
+                interpreter.assignVariableValue(((XLParser.IdentifierNode) unaryOp.getExpr()).getChars(), result);
             }
             return operand;
-        } else if (unaryOp instanceof CalculatorParser.PostDecrementNode) {
+        } else if (unaryOp instanceof XLParser.PostDecrementNode) {
             Value result = callUnaryNumericFunction(operand, "postdecrement");
-            if (unaryOp.getExpr() instanceof CalculatorParser.IdentifierNode) {
-                interpreter.assignVariableValue(((CalculatorParser.IdentifierNode) unaryOp.getExpr()).getChars(), result);
+            if (unaryOp.getExpr() instanceof XLParser.IdentifierNode) {
+                interpreter.assignVariableValue(((XLParser.IdentifierNode) unaryOp.getExpr()).getChars(), result);
             }
             return operand;
         } else {
@@ -297,7 +297,7 @@ public class CalculatorInterpreter {
         }
     }
 
-    private Value identifierExpression(final CalculatorParser.IdentifierNode expression) {
+    private Value identifierExpression(final XLParser.IdentifierNode expression) {
         String identifierName = expression.getChars();
         Value value = interpreter.identifier(identifierName);
         if (value.getType().equals(interpreter.getType(TYPE_NUMBER))) {
@@ -306,7 +306,7 @@ public class CalculatorInterpreter {
         return interpreter.identifier(identifierName);
     }
 
-    private Value literalExpression(final CalculatorParser.LiteralNode literal) {
+    private Value literalExpression(final XLParser.LiteralNode literal) {
         try {
             Long longValue = Long.parseLong(literal.getValue());
             return new Value(longValue, interpreter.getType(TYPE_NUMBER));

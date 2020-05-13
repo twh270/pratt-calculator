@@ -15,19 +15,39 @@ public class Parser {
     private final PrintStream debugStream;
     private final ParseContext parseContext;
 
-    private static class ParserRule {
+    private static class ParserExpressionRule {
         final Pair<Integer, Integer> precedencePair;
         final PrefixParser prefixParser;
         final InfixParser infixParser;
 
-        public ParserRule(final Pair<Integer, Integer> precedencePair, final PrefixParser parser, final InfixParser infixParser) {
+        public ParserExpressionRule(final Pair<Integer, Integer> precedencePair, final PrefixParser parser, final InfixParser infixParser) {
             this.precedencePair = precedencePair;
             this.prefixParser = parser;
             this.infixParser = infixParser;
         }
     }
 
-    private final Map<TokenType, ParserRule> parserRules = new HashMap<>();
+    public static <T extends Node> T require(ParseContext parseContext, int precedence, Class clazz, String error) {
+        Node node = parseContext.parse(precedence);
+        return require(node, clazz, error);
+    }
+
+    public static <T extends Node> T require(Node node, Class clazz, String error) {
+        if (!(clazz.isAssignableFrom(node.getClass()))) {
+            throw new IllegalStateException(error + " (got " + node.getClass().getSimpleName() + "='" + node + "')");
+        }
+        return (T) node;
+    }
+
+    public static Token require(Lexer lexer, TokenType tokenType, String error) {
+        Token token = lexer.peek();
+        if (!(token.getType() == tokenType)) {
+            throw new IllegalStateException(error + "(got " + token + ")");
+        }
+        return lexer.next();
+    }
+
+    private final Map<TokenType, ParserExpressionRule> parserRules = new HashMap<>();
 
     public Parser(Lexer lexer, PrintStream debugStream) {
         this.lexer = lexer;
@@ -35,11 +55,11 @@ public class Parser {
         this.parseContext = new ParseContext(this, lexer, debugStream);
     }
 
-    public void registerParserRule(TokenType tokenType, Pair<Integer, Integer> precedencePair, PrefixParser prefixParser, InfixParser infixParser) {
+    public void registerParserExpressionRule(TokenType tokenType, Pair<Integer, Integer> precedencePair, PrefixParser prefixParser, InfixParser infixParser) {
         if (parserRules.get(tokenType) != null) {
             throw new IllegalArgumentException("A parser rule has already been registered for " + tokenType);
         }
-        parserRules.put(tokenType, new ParserRule(precedencePair, prefixParser, infixParser));
+        parserRules.put(tokenType, new ParserExpressionRule(precedencePair, prefixParser, infixParser));
     }
 
     public List<Node> parse() {
