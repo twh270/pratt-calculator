@@ -1,5 +1,9 @@
 package org.byteworks.xl.lexer;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 public class Lexer {
     private final String input;
     private int pos;
@@ -139,15 +143,37 @@ public class Lexer {
         return token;
     }
 
-    public boolean consumeIf(TokenType... tokenTypes) {
+    public boolean peekIs(TokenType... tokenTypes) {
         Token token = peek();
         for (TokenType tokenType : tokenTypes) {
             if (token.getType() == tokenType) {
-                next();
                 return true;
             }
         }
         return false;
+    }
+
+    public boolean consumeIf(TokenType... tokenTypes) {
+        Token token = peek();
+        if (peekIs(tokenTypes)) {
+            next();
+            return true;
+        }
+        return false;
+    }
+
+    public List<Token> consumeUntil(final TokenType... tokenTypes) {
+        List<Token> tokens = new ArrayList<>();
+        while(true) {
+            Token token = peek();
+            if (peekIs(tokenTypes)) {
+                return tokens;
+            }
+            if (token.getType() == TokenType.EOF) {
+                throw new IllegalStateException("Reached EOF while scanning for token type(s) " + Arrays.toString(tokenTypes));
+            }
+            tokens.add(next());
+        }
     }
 
     private char peek_ch() {

@@ -19,3 +19,4 @@ We read code much more than we write it. So reading code should be easy on the e
 * Add parens to function definition
 * Use type inference to determine function parameter types
 * Add a `String` type
+* Lazy evaluation
