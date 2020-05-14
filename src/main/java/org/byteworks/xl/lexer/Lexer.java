@@ -154,7 +154,6 @@ public class Lexer {
     }
 
     public boolean consumeIf(TokenType... tokenTypes) {
-        Token token = peek();
         if (peekIs(tokenTypes)) {
             next();
             return true;

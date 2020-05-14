@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.byteworks.xl.lexer.Lexer;
+import org.byteworks.xl.lexer.Token;
 import org.byteworks.xl.lexer.TokenType;
 import org.byteworks.xl.parser.InfixParser;
 import org.byteworks.xl.parser.Node;
@@ -14,8 +15,11 @@ import org.byteworks.xl.parser.Pair;
 import org.byteworks.xl.parser.ParseContext;
 import org.byteworks.xl.parser.Parser;
 import org.byteworks.xl.parser.PrefixParser;
+import org.byteworks.xl.parser.rule.Any;
 import org.byteworks.xl.parser.rule.Compose;
+import org.byteworks.xl.parser.rule.Constant;
 import org.byteworks.xl.parser.rule.Convert;
+import org.byteworks.xl.parser.rule.FromToken;
 import org.byteworks.xl.parser.rule.PassThrough;
 import org.byteworks.xl.parser.rule.Require;
 import org.byteworks.xl.parser.rule.RequireNode;
@@ -56,36 +60,46 @@ public class XLParser extends Parser {
         static final Pair<Integer, Integer> NUMBER = new Pair<>(-1, 12);
     }
 
-    private static final PrefixParser eof = (parseContext, token) -> new EmptyNode();
-    private static final PrefixParser eol = (parseContext, token) -> parseContext.parse(PrecedencePairs.EOL.getRight());
-    private static final PrefixParser number = (parseContext, token) -> new LiteralNode(token.getChars());
+    private static final Constant<EmptyNode> constantEmpty = new Constant<>(new EmptyNode());
+
+    private static final PrefixParser eof = (parseContext) -> constantEmpty.apply(parseContext);
+
+    private static final Any<Node> eolParser = new Any<>(PrecedencePairs.EOL.getRight());
+    private static final PrefixParser eol = (parseContext) -> eolParser.apply(parseContext);
+
+    private static final FromToken<LiteralNode> numberNodeParser = new FromToken<>(LiteralNode::new);
+    private static final PrefixParser number = (parseContext) -> numberNodeParser.apply(parseContext);
 
     private static final Convert<ExpressionNode, NegativeSignedNode> minusNodeParser = new Convert<>(
             new Require<>(PrecedencePairs.SIGNED.getRight(), ExpressionNode.class, "Must provide an expression for negative-signed"), NegativeSignedNode::new
     );
-    private static final PrefixParser minusSigned = (parseContext, token) -> minusNodeParser.apply(parseContext);
+    private static final PrefixParser minusSigned = (parseContext) -> minusNodeParser.apply(parseContext);
 
     private static final Convert<ExpressionNode, PositiveSignedNode> plusNodeParser = new Convert<>(
             new Require<>(PrecedencePairs.SIGNED.getRight(), ExpressionNode.class, "Must provide an expression for positive-signed"),
             PositiveSignedNode::new
     );
-    private static final PrefixParser plusSigned = (parseContext, token) -> plusNodeParser.apply(parseContext);
+    private static final PrefixParser plusSigned = (parseContext) -> plusNodeParser.apply(parseContext);
 
     private static final Convert<ExpressionNode, PreDecrementNode> preDecrementNodeParser = new Convert<>(
             new Require<>(PrecedencePairs.PRE_DECREMENT.getRight(), ExpressionNode.class, "Must provide an expression for pre-decrement"),
             PreDecrementNode::new
     );
-    private static final PrefixParser preDecrement = (parseContext, token) -> preDecrementNodeParser.apply(parseContext);
+    private static final PrefixParser preDecrement = (parseContext) -> preDecrementNodeParser.apply(parseContext);
 
     private static final Convert<ExpressionNode, PreIncrementNode> preIncrementNodeParser = new Convert<>(
             new Require<>(PrecedencePairs.PRE_INCREMENT.getRight(), ExpressionNode.class, "Must provide an expression for pre-increment"),
             PreIncrementNode::new
     );
-    private static final PrefixParser preIncrement = (parseContext, token) -> preIncrementNodeParser.apply(parseContext);
+    private static final PrefixParser preIncrement = (parseContext) -> preIncrementNodeParser.apply(parseContext);
 
-    private static final PrefixParser lparen = (parseContext, token) -> parseContext.parse(PrecedencePairs.PARENS.getRight());
-    private static final PrefixParser rparen = (parseContext, token) -> new EmptyNode();
-    private static final PrefixParser ident = (parseContext, token) -> new IdentifierNode(token.getChars());
+    private static final Any<Node> lparenParser = new Any<>(PrecedencePairs.PARENS.getRight());
+    private static final PrefixParser lparen = (parseContext) -> lparenParser.apply(parseContext);
+
+    private static final PrefixParser rparen = (parseContext) -> constantEmpty.apply(parseContext);
+
+    private static final FromToken<IdentifierNode> identNodeParser = new FromToken<>(IdentifierNode::new);
+    private static final PrefixParser ident = (parseContext) -> identNodeParser.apply(parseContext);
 
     private static final Require<IdentifierNode> returnTypeParser = new Require<>(
             PrecedencePairs.IDENTIFIER.getRight(),
@@ -111,7 +125,7 @@ public class XLParser extends Parser {
             functionSignatureParser,
             new Require<>(0, ExpressionNode.class, "A function implementation must be an expression"),
             FunctionDeclarationNode::new);
-    private static final PrefixParser functionDefinition = (parseContext, token) -> functionDeclarationNodeParser.apply(parseContext);
+    private static final PrefixParser functionDefinition = (parseContext) -> functionDeclarationNodeParser.apply(parseContext);
 
     private static final Require<ExpressionNode> expressionParser = new Require<>(0, ExpressionNode.class,
             "All elements of an expression list enclosed by { } must be an expression");
@@ -119,7 +133,7 @@ public class XLParser extends Parser {
     private static final Convert<NodeList<ExpressionNode>, ExpressionListNode> leftBraceNodeParser = new Convert<>(
             expressionListParser, ExpressionListNode::new
     );
-    private static final PrefixParser leftBrace = (parseContext, token) -> leftBraceNodeParser.apply(parseContext);
+    private static final PrefixParser leftBrace = (parseContext) -> leftBraceNodeParser.apply(parseContext);
 
 
     // Infix parsers
@@ -190,6 +204,8 @@ public class XLParser extends Parser {
     );
     private static final InfixParser functionCall = (parseContext) -> functionCallNodeParser.apply(parseContext);
 
+    private static final InfixParser endOfLine = (parseContext) -> constantEmpty.apply(parseContext);
+
     private enum ParserRule {
         PLUS(TokenType.PLUS, PrecedencePairs.PLUS_MINUS, plusSigned, add),
         MINUS(TokenType.MINUS, PrecedencePairs.PLUS_MINUS, minusSigned, subtract),
@@ -205,7 +221,7 @@ public class XLParser extends Parser {
         NUMBER(TokenType.NUMBER, PrecedencePairs.NUMBER, number, null),
         LPAREN(TokenType.LPAREN, PrecedencePairs.PARENS, lparen, functionCall),
         IDENTIFIER(TokenType.IDENTIFIER, PrecedencePairs.IDENTIFIER, ident, null),
-        EOL(TokenType.EOL, PrecedencePairs.EOL, eol, null),
+        EOL(TokenType.EOL, PrecedencePairs.EOL, eol, endOfLine),
         FUNCTION_DEFINITION(TokenType.FUNCTION_DEFINITION, null, functionDefinition, null),
         LBRACE(TokenType.LBRACE, PrecedencePairs.BRACES, leftBrace, null),
         RPAREN(TokenType.RPAREN, PrecedencePairs.PARENS, rparen, rightParen),
@@ -252,7 +268,11 @@ public class XLParser extends Parser {
     public static class LiteralNode extends ExpressionNode {
         private final String value;
 
-        LiteralNode(String value) {
+        LiteralNode(final Token token) {
+            this(token.getChars());
+        }
+
+        LiteralNode(final String value) {
             this.value = value;
         }
 
@@ -378,6 +398,10 @@ public class XLParser extends Parser {
 
     public static class IdentifierNode extends ExpressionNode {
         private final String chars;
+
+        IdentifierNode(final Token token) {
+            this(token.getChars());
+        }
 
         IdentifierNode(final String chars) {
             this.chars = chars;

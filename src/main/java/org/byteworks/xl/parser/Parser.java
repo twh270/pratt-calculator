@@ -71,10 +71,10 @@ public class Parser {
     }
 
     public <T extends Node> T parse(final int precedence) {
-        Token token = parseContext.lexer.next();
+        Token token = parseContext.nextToken();
         Node node = parseFirstNode(token);
         while (shouldParseInfix(precedence)) {
-            token = parseContext.lexer.next();
+            token = parseContext.nextToken();
             InfixParser infixParser = infixParser(token);
             if (infixParser == null) {
                 throw new IllegalStateException("Got no infix parser for token " + token.toString() + ", first node is " + node);
@@ -96,7 +96,7 @@ public class Parser {
     private Node parseFirstNode(Token token) {
         PrefixParser prefixParser = prefixParser(token);
         if (prefixParser != null) {
-            return parseContext.parsePrefix(prefixParser, token);
+            return parseContext.parsePrefix(prefixParser);
         }
         throw new IllegalArgumentException("No prefix parser registered for token " + token);
     }

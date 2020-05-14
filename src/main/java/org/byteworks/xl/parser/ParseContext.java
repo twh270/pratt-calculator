@@ -11,6 +11,7 @@ public class ParseContext {
     public final PrintStream debugStream;
 
     private Node currentNode;
+    private Token currentToken;
 
     public ParseContext(Parser parser, Lexer lexer, PrintStream debug) {
         this.parser = parser;
@@ -26,13 +27,22 @@ public class ParseContext {
         return currentNode;
     }
 
-    public Node parsePrefix(final PrefixParser parser, final Token token) {
-        currentNode = parser.parse(this, token);
+    public Token currentToken() {
+        return currentToken;
+    }
+
+    public Node parsePrefix(final PrefixParser parser) {
+        currentNode = parser.parse(this);
         return currentNode;
     }
 
     public Node parseInfix(final InfixParser parser) {
         currentNode = parser.parse(this);
         return currentNode;
+    }
+
+    public Token nextToken() {
+        currentToken = lexer.next();
+        return currentToken;
     }
 }
