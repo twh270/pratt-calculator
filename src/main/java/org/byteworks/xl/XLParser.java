@@ -3,11 +3,9 @@ package org.byteworks.xl;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.byteworks.xl.lexer.Lexer;
-import org.byteworks.xl.lexer.Token;
 import org.byteworks.xl.lexer.TokenType;
 import org.byteworks.xl.parser.InfixParser;
 import org.byteworks.xl.parser.Node;
@@ -17,6 +15,7 @@ import org.byteworks.xl.parser.ParseContext;
 import org.byteworks.xl.parser.Parser;
 import org.byteworks.xl.parser.PrefixParser;
 import org.byteworks.xl.parser.rule.Compose;
+import org.byteworks.xl.parser.rule.Convert;
 import org.byteworks.xl.parser.rule.Require;
 import org.byteworks.xl.parser.rule.RequireWithTerminator;
 import org.byteworks.xl.parser.rule.Sequence;
@@ -55,25 +54,91 @@ public class XLParser extends Parser {
         static final Pair<Integer, Integer> NUMBER = new Pair<>(-1, 12);
     }
 
+    private static final PrefixParser eof = (parseContext, token) -> new EmptyNode();
+    private static final PrefixParser eol = (parseContext, token) -> parseContext.parse(PrecedencePairs.EOL.getRight());
+    private static final PrefixParser number = (parseContext, token) -> new LiteralNode(token.getChars());
+
+    private static final Convert<ExpressionNode, NegativeSignedNode> minusNodeParser = new Convert<>(
+            new Require<>(PrecedencePairs.SIGNED.getRight(), ExpressionNode.class, "Must provide an expression for negative-signed"), NegativeSignedNode::new
+    );
+    private static final PrefixParser minusSigned = (parseContext, token) -> minusNodeParser.apply(parseContext);
+
+    private static final Convert<ExpressionNode, PositiveSignedNode> plusNodeParser = new Convert<>(
+            new Require<>(PrecedencePairs.SIGNED.getRight(), ExpressionNode.class, "Must provide an expression for positive-signed"),
+            PositiveSignedNode::new
+    );
+    private static final PrefixParser plusSigned = (parseContext, token) -> plusNodeParser.apply(parseContext);
+
+    private static final Convert<ExpressionNode, PreDecrementNode> preDecrementNodeParser = new Convert<>(
+            new Require<>(PrecedencePairs.PRE_DECREMENT.getRight(), ExpressionNode.class, "Must provide an expression for pre-decrement"),
+            PreDecrementNode::new
+    );
+    private static final PrefixParser preDecrement = (parseContext, token) -> preDecrementNodeParser.apply(parseContext);
+
+    private static final Convert<ExpressionNode, PreIncrementNode> preIncrementNodeParser = new Convert<>(
+            new Require<>(PrecedencePairs.PRE_INCREMENT.getRight(), ExpressionNode.class, "Must provide an expression for pre-increment"),
+            PreIncrementNode::new
+    );
+    private static final PrefixParser preIncrement = (parseContext, token) -> preIncrementNodeParser.apply(parseContext);
+
+    private static final PrefixParser lparen = (parseContext, token) -> parseContext.parse(PrecedencePairs.PARENS.getRight());
+    private static final PrefixParser rparen = (parseContext, token) -> new EmptyNode();
+    private static final PrefixParser ident = (parseContext, token) -> new IdentifierNode(token.getChars());
+
+    private static final Require<IdentifierNode> returnTypeParser = new Require<>(
+            PrecedencePairs.IDENTIFIER.getRight(),
+            IdentifierNode.class, "Function definition return type(s) must be identifiers");
+    private static final Compose<IdentifierNode, IdentifierNode, TypeExpressionNode> parameterTypeParser =
+            new Compose<>(
+                    new RequireWithTerminator<>(
+                            PrecedencePairs.IDENTIFIER.getRight(),
+                            IdentifierNode.class,
+                            "Function definition type expression must be of the form identifier:type",
+                            TokenType.COLON),
+                    new Require<>(
+                            PrecedencePairs.IDENTIFIER.getRight(),
+                            IdentifierNode.class,
+                            "Function definition type expression must be of the form identifier:type"),
+                    TypeExpressionNode::new);
+    private static final Compose<NodeList<TypeExpressionNode>, NodeList<IdentifierNode>, FunctionSignatureNode> functionSignatureParser =
+            new Compose<>(
+                    new Sequence<>(parameterTypeParser, (ParseContext pc) -> pc.lexer.consumeIf(TokenType.ARROW)),
+                    new Sequence<>(returnTypeParser, (ParseContext pc) -> pc.lexer.peekIs(TokenType.LBRACE)),
+                    FunctionSignatureNode::new);
+    private static final Compose<FunctionSignatureNode, ExpressionNode, FunctionDeclarationNode> functionDeclarationNodeParser = new Compose<>(
+            functionSignatureParser,
+            new Require<>(0, ExpressionNode.class, "A function implementation must be an expression"),
+            FunctionDeclarationNode::new);
+    private static final PrefixParser functionDefinition = (parseContext, token) -> functionDeclarationNodeParser.apply(parseContext);
+
+    private static final Require<ExpressionNode> expressionParser = new Require<>(0, ExpressionNode.class,
+            "All elements of an expression list enclosed by { } must be an expression");
+    private static final Sequence<ExpressionNode> expressionListParser = new Sequence<>(expressionParser, (ParseContext pc) -> pc.lexer.consumeIf(TokenType.RBRACE));
+    private static final Convert<NodeList<ExpressionNode>, ExpressionListNode> leftBraceNodeParser = new Convert<>(
+            expressionListParser, ExpressionListNode::new
+    );
+    private static final PrefixParser leftBrace = (parseContext, token) -> leftBraceNodeParser.apply(parseContext);
+
+
     private enum ParserRule {
-        PLUS(TokenType.PLUS, PrecedencePairs.PLUS_MINUS, new PlusPrefixParser(), new PlusInfixParser()),
-        MINUS(TokenType.MINUS, PrecedencePairs.PLUS_MINUS, new MinusPrefixParser(), new MinusInfixParser()),
+        PLUS(TokenType.PLUS, PrecedencePairs.PLUS_MINUS, plusSigned, new PlusInfixParser()),
+        MINUS(TokenType.MINUS, PrecedencePairs.PLUS_MINUS, minusSigned, new MinusInfixParser()),
         MULTIPLY(TokenType.MULTIPLY, PrecedencePairs.MULT_DIV, null, new MultiplyInfixParser()),
         DIVIDE(TokenType.DIVIDE, PrecedencePairs.MULT_DIV, null, new DivideInfixParser()),
         ASSIGNMENT(TokenType.ASSIGNMENT, PrecedencePairs.ASSIGNMENT, null, new AssignmentInfixParser()),
-        PLUSPLUS(TokenType.PLUSPLUS, PrecedencePairs.POST_INCREMENT, new PlusPlusPrefixParser(), new PlusPlusInfixParser()),
-        MINUSMINUS(TokenType.MINUSMINUS, PrecedencePairs.POST_DECREMENT, new MinusMinusPrefixParser(), new MinusMinusInfixParser()),
+        PLUSPLUS(TokenType.PLUSPLUS, PrecedencePairs.POST_INCREMENT, preIncrement, new PlusPlusInfixParser()),
+        MINUSMINUS(TokenType.MINUSMINUS, PrecedencePairs.POST_DECREMENT, preDecrement, new MinusMinusInfixParser()),
         COMMA(TokenType.COMMA, PrecedencePairs.COMMA, null, new CommaInfixParser()),
         ARROW(TokenType.ARROW, PrecedencePairs.ARROW, null, null),
         COLON(TokenType.COLON, PrecedencePairs.COLON, null, null),
-        EOF(TokenType.EOF, PrecedencePairs.EOF, new EofPrefixParser(), null),
-        NUMBER(TokenType.NUMBER, PrecedencePairs.NUMBER, new NumberPrefixParser(), null),
-        LPAREN(TokenType.LPAREN, PrecedencePairs.PARENS, new LParenPrefixParser(), new LParenInfixParser()),
-        IDENTIFIER(TokenType.IDENTIFIER, PrecedencePairs.IDENTIFIER, new IdentifierPrefixParser(), null),
-        EOL(TokenType.EOL, PrecedencePairs.EOL, new EndOfLinePrefixParser(), null),
-        FUNCTION_DEFINITION(TokenType.FUNCTION_DEFINITION, null, new FunctionDefinitionPrefixParser(), null),
-        LBRACE(TokenType.LBRACE, PrecedencePairs.BRACES, new LeftBracePrefixParser(), null),
-        RPAREN(TokenType.RPAREN, PrecedencePairs.PARENS, new RParenPrefixParser(), new RParenInfixParser()),
+        EOF(TokenType.EOF, PrecedencePairs.EOF, eof, null),
+        NUMBER(TokenType.NUMBER, PrecedencePairs.NUMBER, number, null),
+        LPAREN(TokenType.LPAREN, PrecedencePairs.PARENS, lparen, new LParenInfixParser()),
+        IDENTIFIER(TokenType.IDENTIFIER, PrecedencePairs.IDENTIFIER, ident, null),
+        EOL(TokenType.EOL, PrecedencePairs.EOL, eol, null),
+        FUNCTION_DEFINITION(TokenType.FUNCTION_DEFINITION, null, functionDefinition, null),
+        LBRACE(TokenType.LBRACE, PrecedencePairs.BRACES, leftBrace, null),
+        RPAREN(TokenType.RPAREN, PrecedencePairs.PARENS, rparen, new RParenInfixParser()),
         RBRACE(TokenType.RBRACE, PrecedencePairs.BRACES, null, null);
 
         final TokenType tokenType;
@@ -284,6 +349,10 @@ public class XLParser extends Parser {
     static class ExpressionListNode extends ExpressionNode {
         private final List<ExpressionNode> list;
 
+        ExpressionListNode(final NodeList<ExpressionNode> nodes) {
+            this(nodes.getNodes());
+        }
+
         ExpressionListNode(final List<ExpressionNode> list) {
             this.list = list;
         }
@@ -388,150 +457,6 @@ public class XLParser extends Parser {
         public String toString() {
             String params = parameterTypes.isEmpty() ? "->" : parameterTypes.stream().map(Object::toString).collect(Collectors.joining(" ")) + " ->";
             return params + (returnTypes.isEmpty() ? "" : " ") + returnTypes.stream().map(Object::toString).collect(Collectors.joining(" "));
-        }
-    }
-
-    static class EofPrefixParser implements PrefixParser {
-
-        @Override
-        public Node parse(ParseContext parseContext, Token token) {
-            return new EmptyNode();
-        }
-    }
-
-    static class EndOfLinePrefixParser implements PrefixParser {
-
-        @Override
-        public Node parse(ParseContext parseContext, Token token) {
-            return parseContext.parse(PrecedencePairs.EOL.getRight());
-        }
-    }
-
-    static class NumberPrefixParser implements PrefixParser {
-
-        @Override
-        public Node parse(ParseContext parseContext, Token token) {
-            return new XLParser.LiteralNode(token.getChars());
-        }
-    }
-
-    static class MinusPrefixParser implements PrefixParser {
-
-        @Override
-        public Node parse(ParseContext parseContext, Token token) {
-            ExpressionNode expr = require(parseContext, PrecedencePairs.SIGNED.getRight(), ExpressionNode.class, "Must provide an expression for negative-signed");
-            return new NegativeSignedNode(expr);
-        }
-    }
-
-    static class PlusPrefixParser implements PrefixParser {
-
-        @Override
-        public Node parse(ParseContext parseContext, Token token) {
-            ExpressionNode expr = require(parseContext, PrecedencePairs.SIGNED.getRight(), ExpressionNode.class, "Must provide an expression for positive-signed");
-            return new PositiveSignedNode(expr);
-        }
-    }
-
-    static class MinusMinusPrefixParser implements PrefixParser {
-
-        @Override
-        public Node parse(ParseContext parseContext, Token token) {
-            ExpressionNode expr = require(parseContext, PrecedencePairs.PRE_DECREMENT.getRight(), ExpressionNode.class, "Must provide an expression for pre-decrement");
-            return new PreDecrementNode(expr);
-        }
-    }
-
-    static class PlusPlusPrefixParser implements PrefixParser {
-
-        @Override
-        public Node parse(ParseContext parseContext, Token token) {
-            ExpressionNode expr = require(parseContext, PrecedencePairs.PRE_INCREMENT.getRight(), ExpressionNode.class, "Must provide an expression for pre-increment");
-            return new PreIncrementNode(expr);
-        }
-    }
-
-    static class LParenPrefixParser implements PrefixParser {
-
-        @Override
-        public Node parse(ParseContext parseContext, Token token) {
-            return parseContext.parse(PrecedencePairs.PARENS.getRight());
-        }
-    }
-
-    static class RParenPrefixParser implements PrefixParser {
-
-        @Override
-        public Node parse(final ParseContext parseContext, final Token token) {
-            return new EmptyNode();
-        }
-    }
-
-    static class IdentifierPrefixParser implements PrefixParser {
-
-        @Override
-        public Node parse(ParseContext parseContext, Token token) {
-            return new IdentifierNode(token.getChars());
-        }
-    }
-
-
-    private static <T extends Node> List<T> parseNodeList(ParseContext parseContext, Class clazz, Function<ParseContext, T>elementParser, TokenType... terminators) {
-        List<T> nodes = new ArrayList<>();
-        while(!(parseContext.lexer.peekIs(terminators))) {
-            T node = elementParser.apply(parseContext);
-            require(node, clazz, "Got illegal node type parsing a list of node type " + clazz.getSimpleName());
-            nodes.add(node);
-        }
-        return nodes;
-    }
-
-    static class FunctionDefinitionPrefixParser implements PrefixParser {
-        private final Require<IdentifierNode> returnTypeParser = new Require<>(
-                PrecedencePairs.IDENTIFIER.getRight(),
-                IdentifierNode.class, "Function definition return type(s) must be identifiers");
-        private final Compose<IdentifierNode, IdentifierNode, TypeExpressionNode> parameterTypeParser =
-                new Compose<>(
-                        new RequireWithTerminator<>(
-                                PrecedencePairs.IDENTIFIER.getRight(),
-                                IdentifierNode.class,
-                                "Function definition type expression must be of the form identifier:type",
-                                TokenType.COLON),
-                        new Require<>(
-                                PrecedencePairs.IDENTIFIER.getRight(),
-                                IdentifierNode.class,
-                                "Function definition type expression must be of the form identifier:type"),
-                        TypeExpressionNode::new);
-        private final Compose<NodeList<TypeExpressionNode>, NodeList<IdentifierNode>, FunctionSignatureNode> functionSignatureParser =
-                new Compose<>(
-                        new Sequence<>(parameterTypeParser, (ParseContext pc) -> pc.lexer.consumeIf(TokenType.ARROW)),
-                        new Sequence<>(returnTypeParser, (ParseContext pc) -> pc.lexer.peekIs(TokenType.LBRACE)),
-                        FunctionSignatureNode::new);
-        private final Compose<FunctionSignatureNode, ExpressionNode, FunctionDeclarationNode> functionDeclarationParser = new Compose<>(
-                functionSignatureParser,
-                new Require<>(0, ExpressionNode.class, "A function implementation must be an expression"),
-                FunctionDeclarationNode::new);
-
-        /*
-        functionDeclarationParser = new
-         */
-
-        @Override
-        public Node parse(ParseContext parseContext, Token token) {
-            return functionDeclarationParser.apply(parseContext);
-        }
-    }
-
-    static class LeftBracePrefixParser implements PrefixParser {
-        private ExpressionNode parseExpression(ParseContext parseContext) {
-            return require(parseContext, 0, ExpressionNode.class, "All elements of an expression list enclosed by { } must be an expression");
-        }
-
-        @Override
-        public Node parse(ParseContext parseContext, Token token) {
-            List<ExpressionNode> nodes = parseNodeList(parseContext, ExpressionNode.class, this::parseExpression, TokenType.RBRACE);
-            parseContext.lexer.next();
-            return new ExpressionListNode(nodes);
         }
     }
 
