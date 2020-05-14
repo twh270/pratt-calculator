@@ -79,7 +79,7 @@ public class Parser {
             if (infixParser == null) {
                 throw new IllegalStateException("Got no infix parser for token " + token.toString() + ", first node is " + node);
             }
-            node = infixParser.parse(parseContext, node);
+            node = parseContext.parseInfix(infixParser, node);
         }
         return (T) node;
     }
@@ -94,8 +94,9 @@ public class Parser {
     }
 
     private Node parseFirstNode(Token token) {
-        if (prefixParser(token) != null) {
-            return prefixParser(token).parse(parseContext, token);
+        PrefixParser prefixParser = prefixParser(token);
+        if (prefixParser != null) {
+            return parseContext.parsePrefix(prefixParser, token);
         }
         throw new IllegalArgumentException("No prefix parser registered for token " + token);
     }
