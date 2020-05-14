@@ -5,7 +5,7 @@ import java.util.function.BiFunction;
 import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.ParseContext;
 
-public class Compose<T extends Node, U extends Node, R extends Node> implements NodeParseRule<R> {
+public class Compose<T extends Node, U extends Node, R extends Node> extends PrecNodeParseRule<R> {
     private final NodeParseRule<T> left;
     private final NodeParseRule<U> right;
     private final BiFunction<T, U, R> composer;

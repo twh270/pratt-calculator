@@ -4,6 +4,7 @@ import java.io.PrintStream;
 
 import org.byteworks.xl.lexer.Lexer;
 import org.byteworks.xl.lexer.Token;
+import org.byteworks.xl.parser.rule.PrecNodeParseRule;
 
 public class ParseContext {
     public final Parser parser;
@@ -36,6 +37,11 @@ public class ParseContext {
         return currentNode;
     }
 
+    public <T extends Node> T parsePrefix(final PrecNodeParseRule<T> rule) {
+        currentNode = rule.apply(this);
+        return (T) currentNode;
+    }
+
     public Node parseInfix(final InfixParser parser) {
         currentNode = parser.parse(this);
         return currentNode;
@@ -45,4 +51,5 @@ public class ParseContext {
         currentToken = lexer.next();
         return currentToken;
     }
+
 }

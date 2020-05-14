@@ -5,7 +5,7 @@ import java.util.function.Function;
 import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.ParseContext;
 
-public class Convert<T extends Node, R extends Node> implements NodeParseRule<R> {
+public class Convert<T extends Node, R extends Node> extends PrecNodeParseRule<R> {
     private final NodeParseRule<T> parseRule;
     private final Function<T, R> converter;
 
