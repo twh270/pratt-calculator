@@ -130,26 +130,26 @@ public class XLParser extends Parser {
             new Require<>(PrecedencePairs.PLUS_MINUS.getRight(), ExpressionNode.class, "Must provide an expression for rhs argument to plus"),
             PlusNode::new
     );
-    private static final InfixParser add = (parseContext, node) -> parseAddNode.apply(parseContext);
+    private static final InfixParser add = (parseContext) -> parseAddNode.apply(parseContext);
 
     private static final Convert<ExpressionNode, PostIncrementNode> postIncrementParser = new Convert<>(
             new RequireNode<>(ExpressionNode.class, "Must provide an expression for post-increment"),
             PostIncrementNode::new
     );
-    private static final InfixParser postIncrement = (parseContext, node) -> postIncrementParser.apply(parseContext);
+    private static final InfixParser postIncrement = (parseContext) -> postIncrementParser.apply(parseContext);
 
     private static final Compose<ExpressionNode, ExpressionNode, MinusNode> subtractNodeParser = new Compose<>(
             new RequireNode<>(ExpressionNode.class, "Must provide an expression for lhs argument to minus"),
             new Require<>(PrecedencePairs.PLUS_MINUS.getRight(), ExpressionNode.class, "Must provide an expression for rhs argument to minus"),
             MinusNode::new
     );
-    private static final InfixParser subtract = (parseContext, node) -> subtractNodeParser.apply(parseContext);
+    private static final InfixParser subtract = (parseContext) -> subtractNodeParser.apply(parseContext);
 
     private static final Convert<ExpressionNode, PostDecrementNode> postDecrementNodeParser = new Convert<>(
             new RequireNode<>(ExpressionNode.class, "Must provide an expression for post-decrement"),
             PostDecrementNode::new
     );
-    private static final InfixParser postDecrement = (parseContext, node) -> postDecrementNodeParser.apply(parseContext);
+    private static final InfixParser postDecrement = (parseContext) -> postDecrementNodeParser.apply(parseContext);
 
 
     private static final Compose<ExpressionNode, ExpressionNode, MultiplyNode> multiplyNodeParser = new Compose<>(
@@ -157,38 +157,38 @@ public class XLParser extends Parser {
             new Require<>(PrecedencePairs.MULT_DIV.getRight(), ExpressionNode.class, "Expected an expression for rhs argument to multiply"),
             MultiplyNode::new
     );
-    private static final InfixParser multiply = (parseContext, node) -> multiplyNodeParser.apply(parseContext);
+    private static final InfixParser multiply = (parseContext) -> multiplyNodeParser.apply(parseContext);
 
     private static final Compose<ExpressionNode, ExpressionNode, DivideNode> divideNodeParser = new Compose<>(
             new RequireNode<>(ExpressionNode.class, "Must provide an expression for lhs argument to divide"),
             new Require<>(PrecedencePairs.MULT_DIV.getRight(), ExpressionNode.class, "Must provide an expression for rhs argument to divide"),
             DivideNode::new
     );
-    private static final InfixParser divide = (parseContext, node) -> divideNodeParser.apply(parseContext);
+    private static final InfixParser divide = (parseContext) -> divideNodeParser.apply(parseContext);
 
     private static final Compose<ExpressionNode, ExpressionNode, AssignmentNode> assignmentNodeParser = new Compose<>(
             new RequireNode<>(ExpressionNode.class, "Must provide an expression for lhs argument to assignment"),
             new Require<>(PrecedencePairs.ASSIGNMENT.getRight(), ExpressionNode.class, "Must provide an expression for rhs argument to assignment"),
             AssignmentNode::new
     );
-    private static final InfixParser assignment = (parseContext, node) -> assignmentNodeParser.apply(parseContext);
+    private static final InfixParser assignment = (parseContext) -> assignmentNodeParser.apply(parseContext);
 
     private static final Compose<Node, Node, CommaNode> commaNodeParser = new Compose<>(
             new PassThrough<>(),
             new Require<>(PrecedencePairs.COMMA.getRight(), Node.class, ""),
             CommaNode::new
     );
-    private static final InfixParser comma = (parseContext, node) -> commaNodeParser.apply(parseContext);
+    private static final InfixParser comma = (parseContext) -> commaNodeParser.apply(parseContext);
 
     private static final PassThrough<Node> rightParenNodeParser = new PassThrough<>();
-    private static final InfixParser rightParen = (parseContext, node) -> rightParenNodeParser.apply(parseContext);
+    private static final InfixParser rightParen = (parseContext) -> rightParenNodeParser.apply(parseContext);
 
     private static final Compose<IdentifierNode, Node, FunctionCallNode> functionCallNodeParser = new Compose<>(
             new RequireNode<>(IdentifierNode.class, "Function to be called must be an identifier node"),
             new Require<>(PrecedencePairs.PARENS.getRight(), Node.class, "Error parsing function call arguments"),
             FunctionCallNode::new
     );
-    private static final InfixParser functionCall = (parseContext, node) -> functionCallNodeParser.apply(parseContext);
+    private static final InfixParser functionCall = (parseContext) -> functionCallNodeParser.apply(parseContext);
 
     private enum ParserRule {
         PLUS(TokenType.PLUS, PrecedencePairs.PLUS_MINUS, plusSigned, add),

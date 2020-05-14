@@ -79,7 +79,7 @@ public class Parser {
             if (infixParser == null) {
                 throw new IllegalStateException("Got no infix parser for token " + token.toString() + ", first node is " + node);
             }
-            node = parseContext.parseInfix(infixParser, node);
+            node = parseContext.parseInfix(infixParser);
         }
         return (T) node;
     }

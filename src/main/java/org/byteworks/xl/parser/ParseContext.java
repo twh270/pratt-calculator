@@ -31,8 +31,8 @@ public class ParseContext {
         return currentNode;
     }
 
-    public Node parseInfix(final InfixParser parser, final Node node) {
-        currentNode = parser.parse(this, node);
+    public Node parseInfix(final InfixParser parser) {
+        currentNode = parser.parse(this);
         return currentNode;
     }
 }
