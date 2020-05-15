@@ -3,7 +3,7 @@ package org.byteworks.xl.parser.rule;
 import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.ParseContext;
 
-public class Constant<T extends Node> extends PrecNodeParseRule<T> {
+public class Constant<T extends Node> extends NodeParseRule<T> {
     private final T constant;
 
     public Constant(int precedence, final T constant) {

@@ -8,7 +8,7 @@ import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.NodeList;
 import org.byteworks.xl.parser.ParseContext;
 
-public class Sequence<T extends Node> implements NodeParseRule<NodeList<T>> {
+public class Sequence<T extends Node> extends NodeParseRule<NodeList<T>> {
     private final NodeParseRule<T> elementRule;
     private final Predicate<ParseContext> terminationCondition;
 

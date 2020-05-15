@@ -5,7 +5,7 @@ import static org.byteworks.xl.parser.Parser.require;
 import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.ParseContext;
 
-public class RequireNode<T extends Node> implements NodeParseRule<T> {
+public class RequireNode<T extends Node> extends NodeParseRule<T> {
     private final Class clazz;
     private final String error;
 

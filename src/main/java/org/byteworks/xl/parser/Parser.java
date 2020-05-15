@@ -9,24 +9,12 @@ import java.util.Map;
 import org.byteworks.xl.lexer.Lexer;
 import org.byteworks.xl.lexer.Token;
 import org.byteworks.xl.lexer.TokenType;
-import org.byteworks.xl.parser.rule.PrecNodeParseRule;
+import org.byteworks.xl.parser.rule.NodeParseRule;
 
 public class Parser {
     private final Lexer lexer;
     private final PrintStream debugStream;
     private final ParseContext parseContext;
-
-    private static class ParserExpressionRule {
-        final Pair<Integer, Integer> precedencePair;
-        final PrefixParser prefixParser;
-        final InfixParser infixParser;
-
-        ParserExpressionRule(final Pair<Integer, Integer> precedencePair, final PrefixParser parser, final InfixParser infixParser) {
-            this.precedencePair = precedencePair;
-            this.prefixParser = parser;
-            this.infixParser = infixParser;
-        }
-    }
 
     public static <T extends Node> T require(ParseContext parseContext, int precedence, Class clazz, String error) {
         Node node = parseContext.parse(precedence);
@@ -48,9 +36,8 @@ public class Parser {
         return lexer.next();
     }
 
-    private final Map<TokenType, ParserExpressionRule> parserRules = new HashMap<>();
-    private final Map<TokenType, PrecNodeParseRule<Node>> prefixParseRules = new HashMap<>();
-    private final Map<TokenType, PrecNodeParseRule<Node>> infixParseRules = new HashMap<>();
+    private final Map<TokenType, NodeParseRule<Node>> prefixParseRules = new HashMap<>();
+    private final Map<TokenType, NodeParseRule<Node>> infixParseRules = new HashMap<>();
 
     public Parser(Lexer lexer, PrintStream debugStream) {
         this.lexer = lexer;
@@ -58,18 +45,11 @@ public class Parser {
         this.parseContext = new ParseContext(this, lexer, debugStream);
     }
 
-    public void registerParserExpressionRule(TokenType tokenType, Pair<Integer, Integer> precedencePair, PrefixParser prefixParser, InfixParser infixParser) {
-        if (parserRules.get(tokenType) != null) {
-            throw new IllegalArgumentException("A parser rule has already been registered for " + tokenType);
-        }
-        parserRules.put(tokenType, new ParserExpressionRule(precedencePair, prefixParser, infixParser));
-    }
-
-    public void registerPrefixParserRule(TokenType tokenType, PrecNodeParseRule rule) {
+    public void registerPrefixParserRule(TokenType tokenType, NodeParseRule rule) {
         prefixParseRules.put(tokenType, rule);
     }
 
-    public void registerInfixParserRule(TokenType tokenType, PrecNodeParseRule rule) {
+    public void registerInfixParserRule(TokenType tokenType, NodeParseRule rule) {
         infixParseRules.put(tokenType, rule);
     }
 
@@ -86,7 +66,7 @@ public class Parser {
         Node node = parseFirstNode(token);
         while (shouldParseInfix(precedence)) {
             token = parseContext.nextToken();
-            PrecNodeParseRule<Node> rule = infixParseRules.get(token.getType());
+            NodeParseRule<Node> rule = infixParseRules.get(token.getType());
             node = parseContext.parseInfix(rule);
         }
         return (T) node;
@@ -99,7 +79,7 @@ public class Parser {
     }
 
     private Node parseFirstNode(Token token) {
-        PrecNodeParseRule prefixParseRule = prefixParseRules.get(token.getType());
+        NodeParseRule prefixParseRule = prefixParseRules.get(token.getType());
         if (prefixParseRule != null) {
             return parseContext.parsePrefix(prefixParseRule);
         }
@@ -107,7 +87,7 @@ public class Parser {
     }
 
     private int precedence(Token token) {
-        PrecNodeParseRule rule = infixParseRules.get(token.getType());
+        NodeParseRule rule = infixParseRules.get(token.getType());
         return rule.precedence();
     }
 

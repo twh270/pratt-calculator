@@ -4,13 +4,12 @@ import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.ParseContext;
 import org.byteworks.xl.parser.Parser;
 
-public class Require<T extends Node> implements NodeParseRule<T> {
-    private final int precedence;
+public class Require<T extends Node> extends NodeParseRule<T> {
     private final Class clazz;
     private final String error;
 
     public Require(final int precedence, final Class clazz, final String error) {
-        this.precedence = precedence;
+        super(precedence);
         this.clazz = clazz;
         this.error = error;
     }
@@ -21,6 +20,6 @@ public class Require<T extends Node> implements NodeParseRule<T> {
 
     @Override
     public T apply(final ParseContext parseContext) {
-        return Parser.require(parseContext, precedence, clazz, error);
+        return Parser.require(parseContext, precedence(), clazz, error);
     }
 }

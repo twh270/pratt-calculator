@@ -65,170 +65,113 @@ public class XLParser extends Parser {
         return parser;
     }
 
-    private static class PrecedencePairs {
-        static final Pair<Integer, Integer> EOF = new Pair<>(-1, null);
-        static final Pair<Integer, Integer> EOL = new Pair<>(-1, 0);
-        static final Pair<Integer, Integer> PARENS = new Pair<>(1, 0);
-        static final Pair<Integer, Integer> BRACES = new Pair<>(-1, 0);
-        static final Pair<Integer, Integer> COMMA = new Pair<>(1, 2);
-        static final Pair<Integer, Integer> ARROW = new Pair<>(1, 2);
-        static final Pair<Integer, Integer> ASSIGNMENT = new Pair<>(3, 4);
-        static final Pair<Integer, Integer> PLUS_MINUS = new Pair<>(5, 6);
-        static final Pair<Integer, Integer> MULT_DIV = new Pair<>(7, 8);
-        static final Pair<Integer, Integer> SIGNED = new Pair<>(null, 10);
-        static final Pair<Integer, Integer> PRE_INCREMENT = new Pair<>(null, 11);
-        static final Pair<Integer, Integer> PRE_DECREMENT = new Pair<>(null, 11);
-        static final Pair<Integer, Integer> POST_INCREMENT = new Pair<>(11, null);
-        static final Pair<Integer, Integer> POST_DECREMENT = new Pair<>(11, null);
-        static final Pair<Integer, Integer> COLON = new Pair<>(11, 12);
-        static final Pair<Integer, Integer> IDENTIFIER = new Pair<>(11, 12);
-        static final Pair<Integer, Integer> NUMBER = new Pair<>(-1, 12);
-    }
+    private static final Pair<Integer, Integer> EOF = new Pair<>(-1, null);
+    private static final Pair<Integer, Integer> EOL = new Pair<>(-1, 0);
+    private static final Pair<Integer, Integer> PARENS = new Pair<>(1, 0);
+    private static final Pair<Integer, Integer> BRACES = new Pair<>(-1, 0);
+    private static final Pair<Integer, Integer> COMMA = new Pair<>(1, 2);
+    private static final Pair<Integer, Integer> ARROW = new Pair<>(1, 2);
+    private static final Pair<Integer, Integer> ASSIGNMENT = new Pair<>(3, 4);
+    private static final Pair<Integer, Integer> PLUS_MINUS = new Pair<>(5, 6);
+    private static final Pair<Integer, Integer> MULT_DIV = new Pair<>(7, 8);
+    private static final Pair<Integer, Integer> SIGNED = new Pair<>(null, 10);
+    private static final Pair<Integer, Integer> PRE_INCREMENT = new Pair<>(null, 11);
+    private static final Pair<Integer, Integer> PRE_DECREMENT = new Pair<>(null, 11);
+    private static final Pair<Integer, Integer> POST_INCREMENT = new Pair<>(11, null);
+    private static final Pair<Integer, Integer> POST_DECREMENT = new Pair<>(11, null);
+    private static final Pair<Integer, Integer> COLON = new Pair<>(11, 12);
+    private static final Pair<Integer, Integer> IDENTIFIER = new Pair<>(11, 12);
 
     // Prefix parsers
 
 
     private static final Constant<EmptyNode> constantEmpty = new Constant<>(new EmptyNode());
 
-    private static final Any<Node> eolParser = new Any<>(PrecedencePairs.EOL.getRight());
+    private static final Any<Node> eolParser = new Any<>(EOL.getRight());
 
     private static final FromToken<LiteralNode> numberNodeParser = new FromToken<>(LiteralNode::new);
 
-    private static final Convert<ExpressionNode, NegativeSignedNode> minusNodeParser = new Convert<>(
-            new Require<>(PrecedencePairs.SIGNED.getRight(), ExpressionNode.class, "Must provide an expression for negative-signed"), NegativeSignedNode::new
-    );
+    private static final Convert<ExpressionNode, NegativeSignedNode> minusNodeParser = new Convert<>(new Require<>(SIGNED.getRight(), ExpressionNode.class, "Must provide an " +
+            "expression for negative-signed"), NegativeSignedNode::new);
 
-    private static final Convert<ExpressionNode, PositiveSignedNode> plusNodeParser = new Convert<>(
-            new Require<>(PrecedencePairs.SIGNED.getRight(), ExpressionNode.class, "Must provide an expression for positive-signed"),
-            PositiveSignedNode::new
-    );
+    private static final Convert<ExpressionNode, PositiveSignedNode> plusNodeParser = new Convert<>(new Require<>(SIGNED.getRight(), ExpressionNode.class, "Must provide an " +
+            "expression for positive-signed"), PositiveSignedNode::new);
 
-    private static final Convert<ExpressionNode, PreDecrementNode> preDecrementNodeParser = new Convert<>(
-            new Require<>(PrecedencePairs.PRE_DECREMENT.getRight(), ExpressionNode.class, "Must provide an expression for pre-decrement"),
-            PreDecrementNode::new
-    );
+    private static final Convert<ExpressionNode, PreDecrementNode> preDecrementNodeParser = new Convert<>(new Require<>(PRE_DECREMENT.getRight(), ExpressionNode.class, "Must provide" +
+            " an expression for pre-decrement"), PreDecrementNode::new);
 
-    private static final Convert<ExpressionNode, PreIncrementNode> preIncrementNodeParser = new Convert<>(
-            new Require<>(PrecedencePairs.PRE_INCREMENT.getRight(), ExpressionNode.class, "Must provide an expression for pre-increment"),
-            PreIncrementNode::new
-    );
+    private static final Convert<ExpressionNode, PreIncrementNode> preIncrementNodeParser = new Convert<>(new Require<>(PRE_INCREMENT.getRight(), ExpressionNode.class, "Must provide" +
+            " an expression for pre-increment"), PreIncrementNode::new);
 
-    private static final Any<Node> lparenParser = new Any<>(PrecedencePairs.PARENS.getRight());
+    private static final Any<Node> lparenParser = new Any<>(PARENS.getRight());
 
     private static final FromToken<IdentifierNode> identNodeParser = new FromToken<>(IdentifierNode::new);
 
-    private static final Require<IdentifierNode> returnTypeParser = new Require<>(
-            PrecedencePairs.IDENTIFIER.getRight(),
-            IdentifierNode.class, "Function definition return type(s) must be identifiers");
-    private static final Compose<IdentifierNode, IdentifierNode, TypeExpressionNode> parameterTypeParser =
-            new Compose<>(
-                    new RequireWithTerminator<>(
-                            PrecedencePairs.IDENTIFIER.getRight(),
-                            IdentifierNode.class,
-                            "Function definition type expression must be of the form identifier:type",
-                            TokenType.COLON),
-                    new Require<>(
-                            PrecedencePairs.IDENTIFIER.getRight(),
-                            IdentifierNode.class,
-                            "Function definition type expression must be of the form identifier:type"),
-                    TypeExpressionNode::new);
-    private static final Compose<NodeList<TypeExpressionNode>, NodeList<IdentifierNode>, FunctionSignatureNode> functionSignatureParser =
-            new Compose<>(
-                    new Sequence<>(parameterTypeParser, (ParseContext pc) -> pc.lexer.consumeIf(TokenType.ARROW)),
-                    new Sequence<>(returnTypeParser, (ParseContext pc) -> pc.lexer.peekIs(TokenType.LBRACE)),
-                    FunctionSignatureNode::new);
-    private static final Compose<FunctionSignatureNode, ExpressionNode, FunctionDeclarationNode> functionDeclarationNodeParser = new Compose<>(
-            functionSignatureParser,
-            new Require<>(0, ExpressionNode.class, "A function implementation must be an expression"),
-            FunctionDeclarationNode::new);
+    private static final Require<IdentifierNode> returnTypeParser = new Require<>(IDENTIFIER.getRight(), IdentifierNode.class, "Function definition return type(s) must be " +
+            "identifiers");
+    private static final Compose<IdentifierNode, IdentifierNode, TypeExpressionNode> parameterTypeParser = new Compose<>(new RequireWithTerminator<>(IDENTIFIER.getRight(),
+            IdentifierNode.class, "Function definition type expression must be of the form identifier:type", TokenType.COLON), new Require<>(IDENTIFIER.getRight(),
+            IdentifierNode.class, "Function definition type expression must be of the form identifier:type"), TypeExpressionNode::new);
+    private static final Compose<NodeList<TypeExpressionNode>, NodeList<IdentifierNode>, FunctionSignatureNode> functionSignatureParser = new Compose<>(new Sequence<>(parameterTypeParser,
+            (ParseContext pc) -> pc.lexer.consumeIf(TokenType.ARROW)), new Sequence<>(returnTypeParser, (ParseContext pc) -> pc.lexer.peekIs(TokenType.LBRACE)), FunctionSignatureNode::new);
+    private static final Compose<FunctionSignatureNode, ExpressionNode, FunctionDeclarationNode> functionDeclarationNodeParser = new Compose<>(functionSignatureParser, new Require<>(0,
+            ExpressionNode.class, "A function implementation must be an expression"), FunctionDeclarationNode::new);
 
-    private static final Require<ExpressionNode> expressionParser = new Require<>(0, ExpressionNode.class,
-            "All elements of an expression list enclosed by { } must be an expression");
+    private static final Require<ExpressionNode> expressionParser = new Require<>(0, ExpressionNode.class, "All elements of an expression list enclosed by { } must be an expression");
     private static final Sequence<ExpressionNode> expressionListParser = new Sequence<>(expressionParser, (ParseContext pc) -> pc.lexer.consumeIf(TokenType.RBRACE));
-    private static final Convert<NodeList<ExpressionNode>, ExpressionListNode> leftBraceNodeParser = new Convert<>(
-            expressionListParser, ExpressionListNode::new
-    );
+    private static final Convert<NodeList<ExpressionNode>, ExpressionListNode> leftBraceNodeParser = new Convert<>(expressionListParser, ExpressionListNode::new);
 
 
     // Infix parsers
 
 
-    private static final Compose<ExpressionNode, ExpressionNode, PlusNode> parseAddNode = new Compose<>(
-            PrecedencePairs.PLUS_MINUS.getLeft(),
-            new RequireNode<>(ExpressionNode.class, "Must provide an expression for lhs argument to plus"),
-            new Require<>(PrecedencePairs.PLUS_MINUS.getRight(), ExpressionNode.class, "Must provide an expression for rhs argument to plus"),
-            PlusNode::new
-    );
+    private static final Compose<ExpressionNode, ExpressionNode, PlusNode> parseAddNode = new Compose<>(PLUS_MINUS.getLeft(), new RequireNode<>(ExpressionNode.class, "Must provide " +
+            "an expression for lhs argument to plus"), new Require<>(PLUS_MINUS.getRight(), ExpressionNode.class, "Must provide an expression for rhs argument to plus"),
+            PlusNode::new);
 
-    private static final Convert<ExpressionNode, PostIncrementNode> postIncrementParser = new Convert<>(
-            PrecedencePairs.POST_INCREMENT.getLeft(),
-            new RequireNode<>(ExpressionNode.class, "Must provide an expression for post-increment"),
-            PostIncrementNode::new
-    );
+    private static final Convert<ExpressionNode, PostIncrementNode> postIncrementParser = new Convert<>(POST_INCREMENT.getLeft(), new RequireNode<>(ExpressionNode.class, "Must " +
+            "provide an expression for post-increment"), PostIncrementNode::new);
 
-    private static final Compose<ExpressionNode, ExpressionNode, MinusNode> subtractNodeParser = new Compose<>(
-            PrecedencePairs.PLUS_MINUS.getLeft(),
-            new RequireNode<>(ExpressionNode.class, "Must provide an expression for lhs argument to minus"),
-            new Require<>(PrecedencePairs.PLUS_MINUS.getRight(), ExpressionNode.class, "Must provide an expression for rhs argument to minus"),
-            MinusNode::new
-    );
+    private static final Compose<ExpressionNode, ExpressionNode, MinusNode> subtractNodeParser = new Compose<>(PLUS_MINUS.getLeft(), new RequireNode<>(ExpressionNode.class, "Must " +
+            "provide an expression for lhs argument to minus"), new Require<>(PLUS_MINUS.getRight(), ExpressionNode.class, "Must provide an expression for rhs argument to minus"),
+            MinusNode::new);
 
-    private static final Convert<ExpressionNode, PostDecrementNode> postDecrementNodeParser = new Convert<>(
-            PrecedencePairs.POST_DECREMENT.getLeft(),
-            new RequireNode<>(ExpressionNode.class, "Must provide an expression for post-decrement"),
-            PostDecrementNode::new
-    );
+    private static final Convert<ExpressionNode, PostDecrementNode> postDecrementNodeParser = new Convert<>(POST_DECREMENT.getLeft(), new RequireNode<>(ExpressionNode.class, "Must " +
+            "provide an expression for post-decrement"), PostDecrementNode::new);
 
-    private static final Compose<ExpressionNode, ExpressionNode, MultiplyNode> multiplyNodeParser = new Compose<>(
-            PrecedencePairs.MULT_DIV.getLeft(),
-            new RequireNode<>(ExpressionNode.class, "Expected an expression for lhs argument to multiply"),
-            new Require<>(PrecedencePairs.MULT_DIV.getRight(), ExpressionNode.class, "Expected an expression for rhs argument to multiply"),
-            MultiplyNode::new
-    );
+    private static final Compose<ExpressionNode, ExpressionNode, MultiplyNode> multiplyNodeParser = new Compose<>(MULT_DIV.getLeft(), new RequireNode<>(ExpressionNode.class,
+            "Expected an expression for lhs argument to multiply"), new Require<>(MULT_DIV.getRight(), ExpressionNode.class, "Expected an expression for rhs argument to multiply"),
+            MultiplyNode::new);
 
-    private static final Compose<ExpressionNode, ExpressionNode, DivideNode> divideNodeParser = new Compose<>(
-            PrecedencePairs.MULT_DIV.getLeft(),
-            new RequireNode<>(ExpressionNode.class, "Must provide an expression for lhs argument to divide"),
-            new Require<>(PrecedencePairs.MULT_DIV.getRight(), ExpressionNode.class, "Must provide an expression for rhs argument to divide"),
-            DivideNode::new
-    );
+    private static final Compose<ExpressionNode, ExpressionNode, DivideNode> divideNodeParser = new Compose<>(MULT_DIV.getLeft(), new RequireNode<>(ExpressionNode.class, "Must " +
+            "provide an expression for lhs argument to divide"), new Require<>(MULT_DIV.getRight(), ExpressionNode.class, "Must provide an expression for rhs argument to divide"),
+            DivideNode::new);
 
-    private static final Compose<ExpressionNode, ExpressionNode, AssignmentNode> assignmentNodeParser = new Compose<>(
-            PrecedencePairs.ASSIGNMENT.getLeft(),
-            new RequireNode<>(ExpressionNode.class, "Must provide an expression for lhs argument to assignment"),
-            new Require<>(PrecedencePairs.ASSIGNMENT.getRight(), ExpressionNode.class, "Must provide an expression for rhs argument to assignment"),
-            AssignmentNode::new
-    );
+    private static final Compose<ExpressionNode, ExpressionNode, AssignmentNode> assignmentNodeParser = new Compose<>(ASSIGNMENT.getLeft(), new RequireNode<>(ExpressionNode.class,
+            "Must provide an expression for lhs argument to assignment"), new Require<>(ASSIGNMENT.getRight(), ExpressionNode.class, "Must provide an expression for rhs argument to " +
+            "assignment"), AssignmentNode::new);
 
-    private static final Compose<Node, Node, CommaNode> commaNodeParser = new Compose<>(
-            PrecedencePairs.COMMA.getLeft(),
-            new PassThrough<>(),
-            new Require<>(PrecedencePairs.COMMA.getRight(), Node.class, ""),
-            CommaNode::new
-    );
+    private static final Compose<Node, Node, CommaNode> commaNodeParser = new Compose<>(COMMA.getLeft(), new PassThrough<>(), new Require<>(COMMA.getRight(),
+            Node.class, ""), CommaNode::new);
 
-    private static final PassThrough<Node> rightParenNodeParser = new PassThrough<>(PrecedencePairs.PARENS.getLeft());
+    private static final PassThrough<Node> rightParenNodeParser = new PassThrough<>(PARENS.getLeft());
 
-    private static final Compose<IdentifierNode, Node, FunctionCallNode> functionCallNodeParser = new Compose<>(
-            PrecedencePairs.PARENS.getLeft(),
-            new RequireNode<>(IdentifierNode.class, "Function to be called must be an identifier node"),
-            new Require<>(PrecedencePairs.PARENS.getRight(), Node.class, "Error parsing function call arguments"),
-            FunctionCallNode::new
-    );
+    private static final Compose<IdentifierNode, Node, FunctionCallNode> functionCallNodeParser = new Compose<>(PARENS.getLeft(), new RequireNode<>(IdentifierNode.class, "Function " +
+            "to be called must be an identifier node"), new Require<>(PARENS.getRight(), Node.class, "Error parsing function call arguments"), FunctionCallNode::new);
 
-    private static final Constant<EmptyNode> eofNodeParser = new Constant<>(PrecedencePairs.EOF.getLeft(), new EmptyNode());
+    private static final Constant<EmptyNode> eofNodeParser = new Constant<>(EOF.getLeft(), new EmptyNode());
 
-    private static final Constant<EmptyNode> endOfLineParser = new Constant<>(PrecedencePairs.EOL.getLeft(), new EmptyNode());
+    private static final Constant<EmptyNode> endOfLineParser = new Constant<>(EOL.getLeft(), new EmptyNode());
 
-    private static final Constant<EmptyNode> colonNodeParser = new Constant<>(PrecedencePairs.COLON.getLeft(), new EmptyNode());
+    private static final Constant<EmptyNode> colonNodeParser = new Constant<>(COLON.getLeft(), new EmptyNode());
 
-    private static final Constant<EmptyNode> identifierNodeParser = new Constant<>(PrecedencePairs.IDENTIFIER.getLeft(), new EmptyNode());
+    private static final Constant<EmptyNode> identifierNodeParser = new Constant<>(IDENTIFIER.getLeft(), new EmptyNode());
 
-    private static final Constant<EmptyNode> arrowNodeParser = new Constant<>(PrecedencePairs.ARROW.getLeft(), new EmptyNode());
+    private static final Constant<EmptyNode> arrowNodeParser = new Constant<>(ARROW.getLeft(), new EmptyNode());
 
-    private static final Constant<EmptyNode> leftBraceInfixNodeParser = new Constant<>(PrecedencePairs.BRACES.getLeft(), new EmptyNode());
+    private static final Constant<EmptyNode> leftBraceInfixNodeParser = new Constant<>(BRACES.getLeft(), new EmptyNode());
 
-    private static final Constant<EmptyNode> rightBraceInfixNodeParser = new Constant<>(PrecedencePairs.BRACES.getLeft(), new EmptyNode());
+    private static final Constant<EmptyNode> rightBraceInfixNodeParser = new Constant<>(BRACES.getLeft(), new EmptyNode());
 
     @Override
     public List<Node> parse() {

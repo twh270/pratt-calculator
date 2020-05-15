@@ -5,6 +5,22 @@ import java.util.function.Function;
 import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.ParseContext;
 
-public interface NodeParseRule<T extends Node> extends Function<ParseContext, T> {
-}
+public abstract class NodeParseRule<T extends Node> implements Function<ParseContext, T> {
+    private final int precedence;
 
+    protected static int DEFAULT_PRECEDENCE() {
+        return Integer.MAX_VALUE;
+    }
+
+    protected NodeParseRule() {
+        this(DEFAULT_PRECEDENCE());
+    }
+
+    protected NodeParseRule(final int precedence) {
+        this.precedence = precedence;
+    }
+
+    public int precedence() {
+        return precedence;
+    }
+}

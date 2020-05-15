@@ -3,7 +3,7 @@ package org.byteworks.xl.parser.rule;
 import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.ParseContext;
 
-public class PassThrough<T extends Node> extends PrecNodeParseRule<T> {
+public class PassThrough<T extends Node> extends NodeParseRule<T> {
 
     public PassThrough(int precedence) {
         super(precedence);

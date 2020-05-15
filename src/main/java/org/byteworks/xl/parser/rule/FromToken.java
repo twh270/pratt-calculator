@@ -6,7 +6,7 @@ import org.byteworks.xl.lexer.Token;
 import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.ParseContext;
 
-public class FromToken<T extends Node> extends PrecNodeParseRule<T> {
+public class FromToken<T extends Node> extends NodeParseRule<T> {
     private final Function<Token, T> converter;
 
     public FromToken(final Function<Token, T> converter) {
