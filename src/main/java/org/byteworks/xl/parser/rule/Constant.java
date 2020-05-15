@@ -6,8 +6,13 @@ import org.byteworks.xl.parser.ParseContext;
 public class Constant<T extends Node> extends PrecNodeParseRule<T> {
     private final T constant;
 
-    public Constant(final T constant) {
+    public Constant(int precedence, final T constant) {
+        super(precedence);
         this.constant = constant;
+    }
+
+    public Constant(final T constant) {
+        this(DEFAULT_PRECEDENCE(), constant);
     }
 
     @Override

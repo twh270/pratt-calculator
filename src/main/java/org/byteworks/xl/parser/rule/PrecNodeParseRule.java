@@ -5,8 +5,12 @@ import org.byteworks.xl.parser.Node;
 public abstract class PrecNodeParseRule<T extends Node> implements NodeParseRule<T> {
     private final int precedence;
 
+    protected static int DEFAULT_PRECEDENCE() {
+        return Integer.MAX_VALUE;
+    }
+
     protected PrecNodeParseRule() {
-        this(Integer.MAX_VALUE);
+        this(DEFAULT_PRECEDENCE());
     }
 
     protected PrecNodeParseRule(final int precedence) {

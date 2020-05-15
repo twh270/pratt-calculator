@@ -9,9 +9,14 @@ public class Convert<T extends Node, R extends Node> extends PrecNodeParseRule<R
     private final NodeParseRule<T> parseRule;
     private final Function<T, R> converter;
 
-    public Convert(final NodeParseRule<T> parseRule, final Function<T, R> converter) {
+    public Convert(int precedence, final NodeParseRule<T> parseRule, final Function<T, R> converter) {
+        super(precedence);
         this.parseRule = parseRule;
         this.converter = converter;
+    }
+
+    public Convert(final NodeParseRule<T> parseRule, final Function<T, R> converter) {
+        this(DEFAULT_PRECEDENCE(), parseRule, converter);
     }
 
     @Override

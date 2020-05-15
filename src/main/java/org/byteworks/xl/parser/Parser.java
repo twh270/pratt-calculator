@@ -49,8 +49,8 @@ public class Parser {
     }
 
     private final Map<TokenType, ParserExpressionRule> parserRules = new HashMap<>();
-    private final Map<TokenType, PrecNodeParseRule> prefixParseRules = new HashMap<>();
-    private final Map<TokenType, ParserExpressionRule> infixParseRules = new HashMap<>();
+    private final Map<TokenType, PrecNodeParseRule<Node>> prefixParseRules = new HashMap<>();
+    private final Map<TokenType, PrecNodeParseRule<Node>> infixParseRules = new HashMap<>();
 
     public Parser(Lexer lexer, PrintStream debugStream) {
         this.lexer = lexer;
@@ -69,6 +69,10 @@ public class Parser {
         prefixParseRules.put(tokenType, rule);
     }
 
+    public void registerInfixParserRule(TokenType tokenType, PrecNodeParseRule rule) {
+        infixParseRules.put(tokenType, rule);
+    }
+
     public List<Node> parse() {
         List<Node> nodes = new ArrayList<>();
         while(lexer.hasMoreTokens()) {
@@ -82,22 +86,16 @@ public class Parser {
         Node node = parseFirstNode(token);
         while (shouldParseInfix(precedence)) {
             token = parseContext.nextToken();
-            InfixParser infixParser = infixParser(token);
-            if (infixParser == null) {
-                throw new IllegalStateException("Got no infix parser for token " + token.toString() + ", first node is " + node);
-            }
-            node = parseContext.parseInfix(infixParser);
+            PrecNodeParseRule<Node> rule = infixParseRules.get(token.getType());
+            node = parseContext.parseInfix(rule);
         }
         return (T) node;
     }
 
     private boolean shouldParseInfix(int precedence) {
         Token token = lexer.peek();
-        final Pair<Integer, Integer> precedencePair = precedence(token);
-        if (precedencePair == null) {
-            throw new IllegalStateException("Got no precedence pair for parse infix, token = " + token);
-        }
-        return precedencePair.getLeft() >= precedence;
+        final int infixPrecedence = precedence(token);
+        return infixPrecedence >= precedence;
     }
 
     private Node parseFirstNode(Token token) {
@@ -108,11 +106,9 @@ public class Parser {
         throw new IllegalArgumentException("No prefix parser registered for token " + token);
     }
 
-    private Pair<Integer, Integer> precedence(Token token) {
-        return parserRules.get(token.getType()).precedencePair;
+    private int precedence(Token token) {
+        PrecNodeParseRule rule = infixParseRules.get(token.getType());
+        return rule.precedence();
     }
 
-    private InfixParser infixParser(Token token) {
-        return parserRules.get(token.getType()).infixParser;
-    }
 }

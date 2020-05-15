@@ -8,13 +8,11 @@ import java.util.stream.Collectors;
 import org.byteworks.xl.lexer.Lexer;
 import org.byteworks.xl.lexer.Token;
 import org.byteworks.xl.lexer.TokenType;
-import org.byteworks.xl.parser.InfixParser;
 import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.NodeList;
 import org.byteworks.xl.parser.Pair;
 import org.byteworks.xl.parser.ParseContext;
 import org.byteworks.xl.parser.Parser;
-import org.byteworks.xl.parser.PrefixParser;
 import org.byteworks.xl.parser.rule.Any;
 import org.byteworks.xl.parser.rule.Compose;
 import org.byteworks.xl.parser.rule.Constant;
@@ -34,9 +32,6 @@ public class XLParser extends Parser {
 
     public static XLParser createParser(Lexer lexer, PrintStream debugStream) {
         XLParser parser = new XLParser(lexer, debugStream);
-        for (ParserRule rule : ParserRule.values()) {
-            parser.registerParserExpressionRule(rule.tokenType, rule.precedencePair, rule.prefixParser, rule.infixParser);
-        }
         parser.registerPrefixParserRule(TokenType.EOL, eolParser);
         parser.registerPrefixParserRule(TokenType.LPAREN, lparenParser);
         parser.registerPrefixParserRule(TokenType.NUMBER, numberNodeParser);
@@ -48,6 +43,24 @@ public class XLParser extends Parser {
         parser.registerPrefixParserRule(TokenType.IDENTIFIER, identNodeParser);
         parser.registerPrefixParserRule(TokenType.FUNCTION_DEFINITION, functionDeclarationNodeParser);
         parser.registerPrefixParserRule(TokenType.LBRACE, leftBraceNodeParser);
+
+        parser.registerInfixParserRule(TokenType.PLUS, parseAddNode);
+        parser.registerInfixParserRule(TokenType.PLUSPLUS, postIncrementParser);
+        parser.registerInfixParserRule(TokenType.MINUS, subtractNodeParser);
+        parser.registerInfixParserRule(TokenType.MINUSMINUS, postDecrementNodeParser);
+        parser.registerInfixParserRule(TokenType.MULTIPLY, multiplyNodeParser);
+        parser.registerInfixParserRule(TokenType.DIVIDE, divideNodeParser);
+        parser.registerInfixParserRule(TokenType.ASSIGNMENT, assignmentNodeParser);
+        parser.registerInfixParserRule(TokenType.COMMA, commaNodeParser);
+        parser.registerInfixParserRule(TokenType.RPAREN, rightParenNodeParser);
+        parser.registerInfixParserRule(TokenType.LPAREN, functionCallNodeParser);
+        parser.registerInfixParserRule(TokenType.EOL, endOfLineParser);
+        parser.registerInfixParserRule(TokenType.EOF, eofNodeParser);
+        parser.registerInfixParserRule(TokenType.COLON, colonNodeParser);
+        parser.registerInfixParserRule(TokenType.IDENTIFIER, identifierNodeParser);
+        parser.registerInfixParserRule(TokenType.ARROW, arrowNodeParser);
+        parser.registerInfixParserRule(TokenType.LBRACE, leftBraceInfixNodeParser);
+        parser.registerInfixParserRule(TokenType.RBRACE, rightBraceInfixNodeParser);
 
         return parser;
     }
@@ -71,6 +84,9 @@ public class XLParser extends Parser {
         static final Pair<Integer, Integer> IDENTIFIER = new Pair<>(11, 12);
         static final Pair<Integer, Integer> NUMBER = new Pair<>(-1, 12);
     }
+
+    // Prefix parsers
+
 
     private static final Constant<EmptyNode> constantEmpty = new Constant<>(new EmptyNode());
 
@@ -133,109 +149,86 @@ public class XLParser extends Parser {
             expressionListParser, ExpressionListNode::new
     );
 
+
     // Infix parsers
 
 
     private static final Compose<ExpressionNode, ExpressionNode, PlusNode> parseAddNode = new Compose<>(
+            PrecedencePairs.PLUS_MINUS.getLeft(),
             new RequireNode<>(ExpressionNode.class, "Must provide an expression for lhs argument to plus"),
             new Require<>(PrecedencePairs.PLUS_MINUS.getRight(), ExpressionNode.class, "Must provide an expression for rhs argument to plus"),
             PlusNode::new
     );
-    private static final InfixParser add = (parseContext) -> parseAddNode.apply(parseContext);
 
     private static final Convert<ExpressionNode, PostIncrementNode> postIncrementParser = new Convert<>(
+            PrecedencePairs.POST_INCREMENT.getLeft(),
             new RequireNode<>(ExpressionNode.class, "Must provide an expression for post-increment"),
             PostIncrementNode::new
     );
-    private static final InfixParser postIncrement = (parseContext) -> postIncrementParser.apply(parseContext);
 
     private static final Compose<ExpressionNode, ExpressionNode, MinusNode> subtractNodeParser = new Compose<>(
+            PrecedencePairs.PLUS_MINUS.getLeft(),
             new RequireNode<>(ExpressionNode.class, "Must provide an expression for lhs argument to minus"),
             new Require<>(PrecedencePairs.PLUS_MINUS.getRight(), ExpressionNode.class, "Must provide an expression for rhs argument to minus"),
             MinusNode::new
     );
-    private static final InfixParser subtract = (parseContext) -> subtractNodeParser.apply(parseContext);
 
     private static final Convert<ExpressionNode, PostDecrementNode> postDecrementNodeParser = new Convert<>(
+            PrecedencePairs.POST_DECREMENT.getLeft(),
             new RequireNode<>(ExpressionNode.class, "Must provide an expression for post-decrement"),
             PostDecrementNode::new
     );
-    private static final InfixParser postDecrement = (parseContext) -> postDecrementNodeParser.apply(parseContext);
-
 
     private static final Compose<ExpressionNode, ExpressionNode, MultiplyNode> multiplyNodeParser = new Compose<>(
+            PrecedencePairs.MULT_DIV.getLeft(),
             new RequireNode<>(ExpressionNode.class, "Expected an expression for lhs argument to multiply"),
             new Require<>(PrecedencePairs.MULT_DIV.getRight(), ExpressionNode.class, "Expected an expression for rhs argument to multiply"),
             MultiplyNode::new
     );
-    private static final InfixParser multiply = (parseContext) -> multiplyNodeParser.apply(parseContext);
 
     private static final Compose<ExpressionNode, ExpressionNode, DivideNode> divideNodeParser = new Compose<>(
+            PrecedencePairs.MULT_DIV.getLeft(),
             new RequireNode<>(ExpressionNode.class, "Must provide an expression for lhs argument to divide"),
             new Require<>(PrecedencePairs.MULT_DIV.getRight(), ExpressionNode.class, "Must provide an expression for rhs argument to divide"),
             DivideNode::new
     );
-    private static final InfixParser divide = (parseContext) -> divideNodeParser.apply(parseContext);
 
     private static final Compose<ExpressionNode, ExpressionNode, AssignmentNode> assignmentNodeParser = new Compose<>(
+            PrecedencePairs.ASSIGNMENT.getLeft(),
             new RequireNode<>(ExpressionNode.class, "Must provide an expression for lhs argument to assignment"),
             new Require<>(PrecedencePairs.ASSIGNMENT.getRight(), ExpressionNode.class, "Must provide an expression for rhs argument to assignment"),
             AssignmentNode::new
     );
-    private static final InfixParser assignment = (parseContext) -> assignmentNodeParser.apply(parseContext);
 
     private static final Compose<Node, Node, CommaNode> commaNodeParser = new Compose<>(
+            PrecedencePairs.COMMA.getLeft(),
             new PassThrough<>(),
             new Require<>(PrecedencePairs.COMMA.getRight(), Node.class, ""),
             CommaNode::new
     );
-    private static final InfixParser comma = (parseContext) -> commaNodeParser.apply(parseContext);
 
-    private static final PassThrough<Node> rightParenNodeParser = new PassThrough<>();
-    private static final InfixParser rightParen = (parseContext) -> rightParenNodeParser.apply(parseContext);
+    private static final PassThrough<Node> rightParenNodeParser = new PassThrough<>(PrecedencePairs.PARENS.getLeft());
 
     private static final Compose<IdentifierNode, Node, FunctionCallNode> functionCallNodeParser = new Compose<>(
+            PrecedencePairs.PARENS.getLeft(),
             new RequireNode<>(IdentifierNode.class, "Function to be called must be an identifier node"),
             new Require<>(PrecedencePairs.PARENS.getRight(), Node.class, "Error parsing function call arguments"),
             FunctionCallNode::new
     );
-    private static final InfixParser functionCall = (parseContext) -> functionCallNodeParser.apply(parseContext);
 
-    private static final InfixParser endOfLine = (parseContext) -> constantEmpty.apply(parseContext);
+    private static final Constant<EmptyNode> eofNodeParser = new Constant<>(PrecedencePairs.EOF.getLeft(), new EmptyNode());
 
-    private enum ParserRule {
-        PLUS(TokenType.PLUS, PrecedencePairs.PLUS_MINUS, null, add),
-        MINUS(TokenType.MINUS, PrecedencePairs.PLUS_MINUS, null, subtract),
-        MULTIPLY(TokenType.MULTIPLY, PrecedencePairs.MULT_DIV, null, multiply),
-        DIVIDE(TokenType.DIVIDE, PrecedencePairs.MULT_DIV, null, divide),
-        ASSIGNMENT(TokenType.ASSIGNMENT, PrecedencePairs.ASSIGNMENT, null, assignment),
-        PLUSPLUS(TokenType.PLUSPLUS, PrecedencePairs.POST_INCREMENT, null, postIncrement),
-        MINUSMINUS(TokenType.MINUSMINUS, PrecedencePairs.POST_DECREMENT, null, postDecrement),
-        COMMA(TokenType.COMMA, PrecedencePairs.COMMA, null, comma),
-        ARROW(TokenType.ARROW, PrecedencePairs.ARROW, null, null),
-        COLON(TokenType.COLON, PrecedencePairs.COLON, null, null),
-        EOF(TokenType.EOF, PrecedencePairs.EOF, null, null),
-        NUMBER(TokenType.NUMBER, PrecedencePairs.NUMBER, null, null),
-        LPAREN(TokenType.LPAREN, PrecedencePairs.PARENS, null, functionCall),
-        IDENTIFIER(TokenType.IDENTIFIER, PrecedencePairs.IDENTIFIER, null, null),
-        EOL(TokenType.EOL, PrecedencePairs.EOL, null, endOfLine),
-        FUNCTION_DEFINITION(TokenType.FUNCTION_DEFINITION, null, null, null),
-        LBRACE(TokenType.LBRACE, PrecedencePairs.BRACES, null, null),
-        RPAREN(TokenType.RPAREN, PrecedencePairs.PARENS, null, rightParen),
-        RBRACE(TokenType.RBRACE, PrecedencePairs.BRACES, null, null);
+    private static final Constant<EmptyNode> endOfLineParser = new Constant<>(PrecedencePairs.EOL.getLeft(), new EmptyNode());
 
-        final TokenType tokenType;
-        final Pair<Integer, Integer> precedencePair;
-        final PrefixParser prefixParser;
-        final InfixParser infixParser;
+    private static final Constant<EmptyNode> colonNodeParser = new Constant<>(PrecedencePairs.COLON.getLeft(), new EmptyNode());
 
-        ParserRule(final TokenType tokenType, final Pair<Integer, Integer> precedencePair, final PrefixParser prefixParser, final InfixParser infixParser) {
-            this.tokenType = tokenType;
-            this.precedencePair = precedencePair;
-            this.prefixParser = prefixParser;
-            this.infixParser = infixParser;
-        }
-    }
+    private static final Constant<EmptyNode> identifierNodeParser = new Constant<>(PrecedencePairs.IDENTIFIER.getLeft(), new EmptyNode());
+
+    private static final Constant<EmptyNode> arrowNodeParser = new Constant<>(PrecedencePairs.ARROW.getLeft(), new EmptyNode());
+
+    private static final Constant<EmptyNode> leftBraceInfixNodeParser = new Constant<>(PrecedencePairs.BRACES.getLeft(), new EmptyNode());
+
+    private static final Constant<EmptyNode> rightBraceInfixNodeParser = new Constant<>(PrecedencePairs.BRACES.getLeft(), new EmptyNode());
 
     @Override
     public List<Node> parse() {

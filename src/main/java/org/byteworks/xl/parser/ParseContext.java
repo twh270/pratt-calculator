@@ -32,12 +32,12 @@ public class ParseContext {
         return currentToken;
     }
 
-    public Node parsePrefix(final PrefixParser parser) {
-        currentNode = parser.parse(this);
-        return currentNode;
+    public <T extends Node> T parsePrefix(final PrecNodeParseRule<T> rule) {
+        currentNode = rule.apply(this);
+        return (T) currentNode;
     }
 
-    public <T extends Node> T parsePrefix(final PrecNodeParseRule<T> rule) {
+    public <T extends Node> T parseInfix(final PrecNodeParseRule<T> rule) {
         currentNode = rule.apply(this);
         return (T) currentNode;
     }
