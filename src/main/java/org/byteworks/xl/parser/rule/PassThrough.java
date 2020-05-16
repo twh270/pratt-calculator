@@ -1,9 +1,8 @@
 package org.byteworks.xl.parser.rule;
 
-import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.ParseContext;
 
-public class PassThrough<T extends Node> extends NodeParseRule<T> {
+public class PassThrough<T> extends NodeParseRule<T, T> {
 
     public PassThrough(int precedence) {
         super(precedence);
@@ -14,7 +13,7 @@ public class PassThrough<T extends Node> extends NodeParseRule<T> {
     }
 
     @Override
-    public T apply(final ParseContext context) {
-        return (T) context.currentNode();
+    public T apply(final ParseContext<T> context) {
+        return context.currentNode();
     }
 }

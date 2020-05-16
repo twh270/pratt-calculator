@@ -2,10 +2,9 @@ package org.byteworks.xl.parser.rule;
 
 import java.util.function.Function;
 
-import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.ParseContext;
 
-public abstract class NodeParseRule<T extends Node> implements Function<ParseContext, T> {
+public abstract class NodeParseRule<T, R> implements Function<ParseContext<T>, R> {
     private final int precedence;
 
     protected static int DEFAULT_PRECEDENCE() {

@@ -1,9 +1,8 @@
 package org.byteworks.xl.parser.rule;
 
-import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.ParseContext;
 
-public class Constant<T extends Node> extends NodeParseRule<T> {
+public class Constant<T> extends NodeParseRule<T, T> {
     private final T constant;
 
     public Constant(int precedence, final T constant) {
@@ -16,7 +15,7 @@ public class Constant<T extends Node> extends NodeParseRule<T> {
     }
 
     @Override
-    public T apply(final ParseContext context) {
+    public T apply(final ParseContext<T> context) {
         return constant;
     }
 }

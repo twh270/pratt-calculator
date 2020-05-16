@@ -5,18 +5,20 @@ import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.ParseContext;
 import org.byteworks.xl.parser.Parser;
 
-public class RequireWithTerminator<T extends Node> extends Require<T> {
+public class RequireWithTerminator<T> extends NodeParseRule<Node, T> {
     private final TokenType terminator;
+    private final Require<T> require;
 
     public RequireWithTerminator(final int precedence, final Class clazz, final String error, TokenType terminator) {
-        super(precedence, clazz, error);
+        super(precedence);
+        this.require = new Require<T>(precedence, clazz, error);
         this.terminator = terminator;
     }
 
     @Override
-    public T apply(final ParseContext parseContext) {
-        T node = super.apply(parseContext);
-        Parser.require(parseContext.lexer, terminator, "Expecting " + expectedClass().getSimpleName() + " followed by " + terminator);
+    public T apply(final ParseContext<Node> parseContext) {
+        T node = require.apply(parseContext);
+        Parser.require(parseContext.lexer, terminator, "Expected terminator " + terminator);
         return node;
     }
 }

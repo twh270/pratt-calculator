@@ -4,7 +4,7 @@ import org.byteworks.xl.parser.Node;
 import org.byteworks.xl.parser.ParseContext;
 import org.byteworks.xl.parser.Parser;
 
-public class Require<T extends Node> extends NodeParseRule<T> {
+public class Require<T> extends NodeParseRule<Node, T> {
     private final Class clazz;
     private final String error;
 
@@ -14,12 +14,8 @@ public class Require<T extends Node> extends NodeParseRule<T> {
         this.error = error;
     }
 
-    Class expectedClass() {
-        return clazz;
-    }
-
     @Override
-    public T apply(final ParseContext parseContext) {
-        return Parser.require(parseContext, precedence(), clazz, error);
+    public T apply(final ParseContext<Node> parseContext) {
+        return (T) Parser.require(parseContext, precedence(), clazz, error);
     }
 }

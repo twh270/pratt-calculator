@@ -6,12 +6,12 @@ import org.byteworks.xl.lexer.Lexer;
 import org.byteworks.xl.lexer.Token;
 import org.byteworks.xl.parser.rule.NodeParseRule;
 
-public class ParseContext {
-    public final Parser parser;
+public class ParseContext<T> {
+    public final Parser<T> parser;
     public final Lexer lexer;
     public final PrintStream debugStream;
 
-    private Node currentNode;
+    private T currentNode;
     private Token currentToken;
 
     public ParseContext(Parser parser, Lexer lexer, PrintStream debug) {
@@ -20,11 +20,11 @@ public class ParseContext {
         this.debugStream = debug;
     }
 
-    public Node parse(int precedence) {
+    public T parse(int precedence) {
         return parser.parse(precedence);
     }
 
-    public Node currentNode() {
+    public T currentNode() {
         return currentNode;
     }
 
@@ -32,14 +32,14 @@ public class ParseContext {
         return currentToken;
     }
 
-    public <T extends Node> T parsePrefix(final NodeParseRule<T> rule) {
+    public T parsePrefix(final NodeParseRule<T, T> rule) {
         currentNode = rule.apply(this);
-        return (T) currentNode;
+        return currentNode;
     }
 
-    public <T extends Node> T parseInfix(final NodeParseRule<T> rule) {
+    public T parseInfix(final NodeParseRule<T, T> rule) {
         currentNode = rule.apply(this);
-        return (T) currentNode;
+        return currentNode;
     }
 
     public Token nextToken() {
