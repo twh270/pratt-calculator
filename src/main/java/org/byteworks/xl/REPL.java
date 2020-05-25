@@ -1,11 +1,12 @@
 package org.byteworks.xl;
 
+import org.byteworks.parser.Node;
+import org.byteworks.parser.Parser;
+import org.byteworks.xl.interpreter.XLInterpreter;
+import org.byteworks.lexer.Lexer;
+
 import java.util.List;
 import java.util.Scanner;
-
-import org.byteworks.xl.lexer.Lexer;
-import org.byteworks.xl.parser.Node;
-import org.byteworks.xl.parser.Parser;
 
 public class REPL {
     public static void main(String[] args) {
@@ -17,7 +18,7 @@ public class REPL {
             if("quit".equalsIgnoreCase(input)) {
                 return;
             }
-            Parser parser = new Parser(new Lexer(input), System.out);
+            Parser<Node> parser = new Parser<>(new Lexer(input), System.out);
             List<Node> nodes = parser.parse();
             interpreter.exec(nodes, System.out);
         }
